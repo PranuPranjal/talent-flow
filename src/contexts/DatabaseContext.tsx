@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { initializeDatabase, checkDatabaseHealth } from '../db/services';
+import { checkDatabaseHealth } from '../db/services';
+import { initializeDatabase as initDb } from '../utils/databaseInit';
 
 interface DatabaseContextType {
   isInitialized: boolean;
@@ -22,7 +23,7 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
     const initDatabase = async () => {
       try {
         setError(null);
-        await initializeDatabase();
+        await initDb();
         setIsInitialized(true);
         
         // Check database health

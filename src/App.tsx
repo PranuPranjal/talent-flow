@@ -1,7 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
 import { DatabaseProvider } from './contexts/DatabaseContext';
-import { initializeMSW } from './msw';
 import Layout from './components/Layout/Layout';
 import Home from './screens/Home/Home';
 import JobsList from './screens/Jobs/JobsList';
@@ -12,13 +10,6 @@ import DatabaseStatus from './components/UI/DatabaseStatus';
 import NetworkStatus from './components/UI/NetworkStatus';
 
 function App() {
-  useEffect(() => {
-    // Initialize MSW in development
-    if (import.meta.env.DEV) {
-      initializeMSW().catch(console.error);
-    }
-  }, []);
-
   return (
     <DatabaseProvider>
       <Router>
