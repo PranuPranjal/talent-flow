@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { jobService } from '../../db/services';
 import type { Job } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
+import DraggableJobCard from '../../components/UI/DraggableJobCard';
 import { JOB_STATUSES } from '../../utils/constants';
 import { useDebounce } from '../../hooks/useDebounce';
 
@@ -13,12 +16,20 @@ const JobsList: React.FC = () => {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState<string | undefined>(undefined);
+  const [isReordering, setIsReordering] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 10,
     total: 0,
     totalPages: 0
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const fetchJobs = async (page = 1) => {
     try {
@@ -43,11 +54,42 @@ const JobsList: React.FC = () => {
 
   useEffect(() => {
     fetchJobs(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, status]);
 
   const handlePageChange = (newPage: number) => {
     fetchJobs(newPage);
+  };
+
+  const handleDragEnd = async (event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const oldIndex = jobs.findIndex((job) => job.id === active.id);
+      const newIndex = jobs.findIndex((job) => job.id === over.id);
+
+      const reorderedJobs = arrayMove(jobs, oldIndex, newIndex);
+      setJobs(reorderedJobs);
+      setIsReordering(true);
+
+      try {
+        // update order in database
+        await jobService.reorderJobs(jobs[oldIndex].order, jobs[newIndex].order);
+
+        // refresh to get updated data
+        await fetchJobs(pagination.page);
+      } catch (error) {
+        console.error('Failed to reorder jobs:', error);
+        // rollback on failure
+        setJobs(jobs);
+        setError('Failed to reorder jobs. Please try again.');
+      } finally {
+        setIsReordering(false);
+      }
+    }
+  };
+
+  const handleViewJob = (job: Job) => {
+    console.log('View job:', job.id);
   };
 
   if (loading) {
@@ -110,45 +152,30 @@ const JobsList: React.FC = () => {
       </div>
 
       {/* Jobs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {jobs.map((job) => (
-          <div key={job.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                job.status === 'active' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {job.status}
-              </span>
-              <span className="text-sm text-gray-500">#{job.order}</span>
-            </div>
-            
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
-            <p className="text-sm text-gray-600 mb-3">{job.location}</p>
-            
-            <div className="flex flex-wrap gap-2 mb-4">
-              {job.tags.slice(0, 3).map((tag) => (
-                <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                  {tag}
-                </span>
-              ))}
-              {job.tags.length > 3 && (
-                <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                  +{job.tags.length - 3} more
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t">
-              <span className="text-sm font-medium text-gray-900">
-                ${job.salary?.min.toLocaleString()} - ${job.salary?.max.toLocaleString()}
-              </span>
-              <Button variant="ghost" size="sm">View</Button>
-            </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={jobs.map(job => job.id)} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {jobs.map((job) => (
+              <DraggableJobCard
+                key={job.id}
+                job={job}
+                onView={handleViewJob}
+              />
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
+
+      {/* Reordering indicator */}
+      {isReordering && (
+        <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          Reordering jobs...
+        </div>
+      )}
 
       {/* Empty State */}
       {jobs.length === 0 && (
