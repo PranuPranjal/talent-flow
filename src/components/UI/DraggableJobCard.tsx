@@ -61,20 +61,32 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView }) => {
         )}
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t">
+      <div className="flex items-center justify-between pt-3 border-t gap-2">
         <span className="text-sm font-medium text-gray-900">
           ${job.salary?.min.toLocaleString()} - ${job.salary?.max.toLocaleString()}
         </span>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onView(job);
-          }}
-        >
-          View
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.location.href = `/assessments/${job.id}/take`;
+            }}
+          >
+            Assessment
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(job);
+            }}
+          >
+            View
+          </Button>
+        </div>
       </div>
     </div>
   );

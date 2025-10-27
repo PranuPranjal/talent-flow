@@ -171,6 +171,61 @@ export class AssessmentService {
     };
   }
 
+  // builder helper methods
+  async addSectionToAssessment(jobId: string, sectionData: Partial<import('../../types').AssessmentSection>): Promise<Assessment> {
+    const assessmentData = await this.getAssessmentByJobId(jobId);
+    let assessment = assessmentData || undefined;
+    
+    if (!assessment) {
+      // Create new assessment if it doesn't exist
+      const id = this.generateId();
+      assessment = {
+        id,
+        jobId,
+        title: 'Assessment',
+        description: '',
+        sections: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      await db.assessments.add(assessment);
+    }
+
+    const newSection = {
+      ...sectionData,
+      id: this.generateId(),
+      questions: [],
+      order: assessment.sections.length
+    };
+
+    assessment.sections.push(newSection as import('../../types').AssessmentSection);
+    assessment.updatedAt = new Date().toISOString();
+
+    await db.assessments.put(assessment);
+    return assessment;
+  }
+
+  async addQuestionToSection(jobId: string, sectionId: string, questionData: Partial<import('../../types').AssessmentQuestion>): Promise<Assessment> {
+    const assessmentData = await this.getAssessmentByJobId(jobId);
+    const assessment = assessmentData || undefined;
+    if (!assessment) throw new Error('Assessment not found');
+
+    const sectionIndex = assessment.sections.findIndex(s => s.id === sectionId);
+    if (sectionIndex === -1) throw new Error('Section not found');
+
+    const newQuestion = {
+      ...questionData,
+      id: this.generateId(),
+      order: assessment.sections[sectionIndex].questions.length
+    };
+
+    assessment.sections[sectionIndex].questions.push(newQuestion as import('../../types').AssessmentQuestion);
+    assessment.updatedAt = new Date().toISOString();
+
+    await db.assessments.put(assessment);
+    return assessment;
+  }
+
   // generate unique ID
   private generateId(): string {
     return Math.random().toString(36).substr(2, 9);

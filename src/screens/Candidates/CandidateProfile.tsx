@@ -144,7 +144,12 @@ const CandidateProfile: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary">Edit Candidate</Button>
-          <Button variant="primary">Schedule Interview</Button>
+          <Button 
+            variant="primary"
+            onClick={() => navigate(`/assessments/${candidate.jobId}/take`)}
+          >
+            Take Assessment
+          </Button>
         </div>
       </div>
 

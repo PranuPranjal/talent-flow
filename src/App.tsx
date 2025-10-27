@@ -7,6 +7,9 @@ import CandidatesList from './screens/Candidates/CandidatesList';
 import CandidatesKanban from './screens/Candidates/CandidatesKanban';
 import CandidateProfile from './screens/Candidates/CandidateProfile';
 import AssessmentsList from './screens/Assessments/AssessmentsList';
+import AssessmentBuilder from './screens/Assessments/AssessmentBuilder';
+import AssessmentRuntime from './screens/Assessments/AssessmentRuntime';
+import AssessmentResponses from './screens/Assessments/AssessmentResponses';
 import NotFound from './screens/NotFound';
 import DatabaseStatus from './components/UI/DatabaseStatus';
 import NetworkStatus from './components/UI/NetworkStatus';
@@ -23,6 +26,9 @@ function App() {
               <Route path="candidates/kanban" element={<CandidatesKanban />} />
               <Route path="candidates/:id" element={<CandidateProfile />} />
               <Route path="assessments" element={<AssessmentsList />} />
+              <Route path="assessments/:jobId/builder" element={<AssessmentBuilder />} />
+              <Route path="assessments/:jobId/take" element={<AssessmentRuntime />} />
+              <Route path="assessments/:jobId/responses" element={<AssessmentResponses />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
