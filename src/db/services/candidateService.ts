@@ -44,9 +44,15 @@ export class CandidateService {
     // apply pagination
     const offset = (page - 1) * pageSize;
     const data = await collection.offset(offset).limit(pageSize).toArray();
+    
+    // Sort by order within each stage
+    const sortedData = data.sort((a, b) => {
+      if (a.stage !== b.stage) return 0; // Don't sort across stages
+      return (a.order || 0) - (b.order || 0);
+    });
 
     return {
-      data,
+      data: sortedData,
       pagination: {
         page,
         pageSize,
@@ -96,6 +102,20 @@ export class CandidateService {
 
     await db.candidates.put(updatedCandidate);
     return updatedCandidate;
+  }
+
+  // reorder candidates within a stage
+  async reorderCandidatesInStage(_stage: string, candidateIds: string[]): Promise<void> {
+    await db.transaction('rw', db.candidates, async () => {
+      const updates = candidateIds.map((id, index) => ({
+        id,
+        order: index
+      }));
+
+      for (const update of updates) {
+        await db.candidates.update(update.id, { order: update.order });
+      }
+    });
   }
 
   // update candidate stage

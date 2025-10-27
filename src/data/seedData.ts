@@ -144,10 +144,18 @@ export function generateCandidates(jobs: Job[]): Candidate[] {
   const candidates: Candidate[] = [];
   const stages: Candidate['stage'][] = ['applied', 'screen', 'tech', 'offer', 'hired', 'rejected'];
   
+  // Track order for each stage
+  const stageOrders: Record<string, number> = {};
+  
   for (let i = 0; i < 1000; i++) {
     const name = randomName();
     const jobId = randomItem(jobs).id;
     const stage = randomItem(stages);
+
+    // Initialize order for this stage if not exists
+    if (!stageOrders[stage]) {
+      stageOrders[stage] = 0;
+    }
 
     candidates.push({
       id: generateId(),
@@ -160,7 +168,8 @@ export function generateCandidates(jobs: Job[]): Candidate[] {
       updatedAt: new Date().toISOString(),
       skills: randomMultiple(skills, Math.floor(Math.random() * 5) + 1),
       experience: Math.floor(Math.random() * 10) + 1,
-      resume: `https://example.com/resumes/${generateId()}.pdf`
+      resume: `https://example.com/resumes/${generateId()}.pdf`,
+      order: stageOrders[stage]++
     });
   }
 

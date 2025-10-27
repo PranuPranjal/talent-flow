@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { List } from 'react-virtualized';
 import 'react-virtualized/styles.css';
 import { candidateService } from '../../db/services';
@@ -10,6 +11,7 @@ import { CANDIDATE_STAGES } from '../../utils/constants';
 import { useDebounce } from '../../hooks/useDebounce';
 
 const CandidatesList: React.FC = () => {
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +124,15 @@ const CandidatesList: React.FC = () => {
           </div>
 
           <div className="md:self-start">
-            <Button variant="primary">Add Candidate</Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="secondary" 
+                onClick={() => navigate('/candidates/kanban')}
+              >
+                Kanban View
+              </Button>
+              <Button variant="primary">Add Candidate</Button>
+            </div>
           </div>
         </div>
       </div>

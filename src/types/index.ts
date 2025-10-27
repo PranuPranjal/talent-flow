@@ -31,6 +31,7 @@ export interface Candidate {
   notes?: string;
   skills?: string[];
   experience?: number;
+  order?: number; // Position within the stage
 }
 
 export interface CandidateTimelineEvent {
