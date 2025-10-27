@@ -5,6 +5,7 @@ import Home from './screens/Home/Home';
 import JobsList from './screens/Jobs/JobsList';
 import CandidatesList from './screens/Candidates/CandidatesList';
 import CandidatesKanban from './screens/Candidates/CandidatesKanban';
+import CandidateProfile from './screens/Candidates/CandidateProfile';
 import AssessmentsList from './screens/Assessments/AssessmentsList';
 import NotFound from './screens/NotFound';
 import DatabaseStatus from './components/UI/DatabaseStatus';
@@ -20,6 +21,7 @@ function App() {
               <Route path="jobs" element={<JobsList />} />
               <Route path="candidates" element={<CandidatesList />} />
               <Route path="candidates/kanban" element={<CandidatesKanban />} />
+              <Route path="candidates/:id" element={<CandidateProfile />} />
               <Route path="assessments" element={<AssessmentsList />} />
           </Route>
           <Route path="*" element={<NotFound />} />

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Candidate } from '../../types';
 
 interface CandidateRowProps {
@@ -11,7 +12,8 @@ interface CandidateRowProps {
 }
 
 const CandidateRow: React.FC<CandidateRowProps> = ({ index, style, data }) => {
-  const { candidates, onViewCandidate } = data;
+  const navigate = useNavigate();
+  const { candidates } = data;
   const candidate = candidates[index];
 
   if (!candidate) {
@@ -90,7 +92,7 @@ const CandidateRow: React.FC<CandidateRowProps> = ({ index, style, data }) => {
 
           <div className="flex items-center gap-2 ml-4">
             <button
-              onClick={() => onViewCandidate(candidate)}
+              onClick={() => navigate(`/candidates/${candidate.id}`)}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               View

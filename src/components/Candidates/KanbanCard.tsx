@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Candidate } from '../../types';
@@ -9,6 +10,7 @@ interface KanbanCardProps {
 }
 
 const KanbanCard: React.FC<KanbanCardProps> = ({ candidate, onView }) => {
+  const navigate = useNavigate();
   const {
     attributes,
     listeners,
@@ -46,7 +48,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ candidate, onView }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onView(candidate);
+              navigate(`/candidates/${candidate.id}`);
             }}
             className="text-blue-600 hover:text-blue-800 text-xs font-medium"
           >
