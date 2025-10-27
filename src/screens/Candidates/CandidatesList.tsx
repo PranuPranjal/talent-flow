@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { List } from 'react-virtualized';
 import 'react-virtualized/styles.css';
@@ -19,6 +19,7 @@ const CandidatesList: React.FC = () => {
   const debouncedSearch = useDebounce(search, 300);
   const [stage, setStage] = useState<string | undefined>(undefined);
   const [totalCount, setTotalCount] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const fetchCandidates = async () => {
     try {
@@ -46,14 +47,17 @@ const CandidatesList: React.FC = () => {
     fetchCandidates();
   }, [debouncedSearch, stage]);
 
+  useEffect(() => {
+    if (searchInputRef.current && search) {
+      searchInputRef.current.focus();
+    }
+  }, [candidates, search]); 
+
   const handleViewCandidate = (candidate: Candidate) => {
-    // TODO: Navigate to candidate detail page
     console.log('View candidate:', candidate.id);
   };
 
-  const filteredCandidates = useMemo(() => {
-    return candidates;
-  }, [candidates]);
+  const filteredCandidates = candidates;
 
   const rowRenderer = ({ index, key, style }: any) => {
     return (
@@ -101,6 +105,7 @@ const CandidatesList: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
             <input
+              ref={searchInputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}

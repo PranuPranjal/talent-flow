@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { jobService } from '../../db/services';
@@ -17,6 +17,7 @@ const JobsList: React.FC = () => {
   const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState<string | undefined>(undefined);
   const [isReordering, setIsReordering] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 10,
@@ -56,6 +57,12 @@ const JobsList: React.FC = () => {
     fetchJobs(1);
   }, [debouncedSearch, status]);
 
+  useEffect(() => {
+    if (searchInputRef.current && search) {
+      searchInputRef.current.focus();
+    }
+  }, [jobs]); 
+
   const handlePageChange = (newPage: number) => {
     fetchJobs(newPage);
   };
@@ -75,7 +82,6 @@ const JobsList: React.FC = () => {
         // update order in database
         await jobService.reorderJobs(jobs[oldIndex].order, jobs[newIndex].order);
 
-        // refresh to get updated data
         await fetchJobs(pagination.page);
       } catch (error) {
         console.error('Failed to reorder jobs:', error);
@@ -123,6 +129,7 @@ const JobsList: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
             <input
+              ref={searchInputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
