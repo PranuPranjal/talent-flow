@@ -3,11 +3,16 @@ import { jobService } from '../../db/services';
 import type { Job } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
+import { JOB_STATUSES } from '../../utils/constants';
+import { useDebounce } from '../../hooks/useDebounce';
 
 const JobsList: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+  const [status, setStatus] = useState<string | undefined>(undefined);
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 10,
@@ -21,7 +26,9 @@ const JobsList: React.FC = () => {
       setError(null);
       const response = await jobService.getJobs({
         page,
-        pageSize: pagination.pageSize
+        pageSize: pagination.pageSize,
+        search: debouncedSearch || undefined,
+        status
       });
       
       setJobs(response.data);
@@ -35,8 +42,9 @@ const JobsList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchJobs();
-  }, []);
+    fetchJobs(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, status]);
 
   const handlePageChange = (newPage: number) => {
     fetchJobs(newPage);
@@ -63,14 +71,42 @@ const JobsList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
-          <p className="text-gray-600">
-            Showing {jobs.length} of {pagination.total} jobs
-          </p>
+          <p className="text-gray-600">Showing {jobs.length} of {pagination.total} jobs</p>
         </div>
-        <Button variant="primary">Create Job</Button>
+
+        <div className="flex flex-col md:flex-row gap-3 md:items-end">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search title..."
+              className="w-full md:w-64 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={status ?? ''}
+              onChange={(e) => setStatus(e.target.value || undefined)}
+              className="w-full md:w-40 rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All</option>
+              {JOB_STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="md:self-start">
+            <Button variant="primary">Create Job</Button>
+          </div>
+        </div>
       </div>
 
       {/* Jobs Grid */}
