@@ -56,9 +56,9 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment,
             aria-label="Drag job card"
             {...listeners}
             onClick={(e) => e.stopPropagation()}
-            className="p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
+            className="p-2 text-gray-600 hover:text-gray-800 cursor-grab active:cursor-grabbing bg-gray-50 rounded-md shadow-sm"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9h.01M12 9h.01M16 9h.01M8 15h.01M12 15h.01M16 15h.01" />
             </svg>
           </button>

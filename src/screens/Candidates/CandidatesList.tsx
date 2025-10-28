@@ -15,6 +15,7 @@ const CandidatesList: React.FC = () => {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [stage, setStage] = useState<string | undefined>(undefined);
+  const [exportStage, setExportStage] = useState<string | undefined>(undefined);
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
@@ -137,6 +138,76 @@ const CandidatesList: React.FC = () => {
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Export</label>
+            <div className="flex gap-2">
+              <select
+                value={exportStage ?? ''}
+                onChange={(e) => setExportStage(e.target.value || undefined)}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All</option>
+                {CANDIDATE_STAGES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  try {
+                    // fetch all matching candidates (large pageSize)
+                    const resp = await candidateService.getCandidates({ page: 1, pageSize: 10000, stage: exportStage });
+                    const rows = resp.data || [];
+
+                    if (rows.length === 0) {
+                      alert('No candidates to export for selected filter');
+                      return;
+                    }
+
+                    // build CSV
+                    const headers = ['Name','Email','Phone','Stage','Applied At','Experience','Skills','Resume'];
+                    const escape = (v: any) => {
+                      if (v === null || v === undefined) return '';
+                      const s = typeof v === 'string' ? v : String(v);
+                      // escape quotes
+                      return `"${s.replace(/"/g, '""')}"`;
+                    };
+
+                    const csv = [headers.join(',')].concat(rows.map(c => {
+                      return [
+                        escape(c.name),
+                        escape(c.email),
+                        escape(c.phone || ''),
+                        escape(c.stage),
+                        escape(c.appliedAt),
+                        escape(c.experience ?? ''),
+                        escape((c.skills || []).join('; ')),
+                        escape(c.resume || '')
+                      ].join(',');
+                    })).join('\n');
+
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const now = new Date().toISOString().slice(0,10);
+                    const stageName = exportStage || 'all';
+                    link.href = url;
+                    link.setAttribute('download', `candidates_${stageName}_${now}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                  } catch (err) {
+                    console.error('Export failed', err);
+                    alert('Failed to export candidates');
+                  }
+                }}
+              >
+                Export
+              </Button>
+            </div>
           </div>
 
           <div className="md:self-start">

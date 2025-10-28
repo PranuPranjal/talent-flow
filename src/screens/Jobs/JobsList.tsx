@@ -24,7 +24,7 @@ const JobsList: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 10,
+    pageSize: 9,
     total: 0,
     totalPages: 0
   });

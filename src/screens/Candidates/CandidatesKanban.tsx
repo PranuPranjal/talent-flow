@@ -138,10 +138,10 @@ const CandidatesKanban: React.FC = () => {
       setIsUpdating(true);
 
       try {
-        await candidateService.updateCandidate(candidateId, { 
-          stage: targetCandidate.stage as Candidate['stage'],
-          order: 0
-        });
+        // use updateCandidateStage so a timeline event is created
+        await candidateService.updateCandidateStage(candidateId, targetCandidate.stage as Candidate['stage']);
+        // ensure ordering resets for the moved candidate
+        await candidateService.updateCandidate(candidateId, { order: 0 });
         await fetchCandidates(page); // Refresh current page
       } catch (error) {
         console.error('Failed to update candidate stage:', error);
