@@ -150,11 +150,8 @@ const AssessmentRuntime: React.FC = () => {
             .find(q => q.id === questionId);
 
           if (question?.type === 'file_upload' && value instanceof File) {
-            return [questionId, {
-              name: value.name,
-              type: value.type,
-              size: value.size
-            }];
+            // store the File
+            return [questionId, value];
           }
           
           if (Array.isArray(value)) {
