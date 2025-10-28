@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { jobService, assessmentService } from '../../db/services';
+import { jobService, assessmentService, candidateService } from '../../db/services';
 import type { Job } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
@@ -29,6 +29,7 @@ const JobsList: React.FC = () => {
     totalPages: 0
   });
   const [jobHasAssessment, setJobHasAssessment] = useState<Record<string, boolean>>({});
+  const [jobCandidateCounts, setJobCandidateCounts] = useState<Record<string, number>>({});
   const navigate = useNavigate();
 
   const sensors = useSensors(
@@ -62,6 +63,21 @@ const JobsList: React.FC = () => {
         setJobHasAssessment(map);
       } catch (err) {
         console.error('Failed to fetch assessments for jobs:', err);
+      }
+      // applied candidates per job
+      try {
+        const counts: Record<string, number> = {};
+        await Promise.all(response.data.map(async (job) => {
+          try {
+            const c = await candidateService.countCandidatesByJob(job.id);
+            counts[job.id] = c;
+          } catch (e) {
+            counts[job.id] = 0;
+          }
+        }));
+        setJobCandidateCounts(counts);
+      } catch (err) {
+        console.error('Failed to fetch candidate counts for jobs:', err);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load jobs');
@@ -234,6 +250,7 @@ const JobsList: React.FC = () => {
               <DraggableJobCard
                 key={job.id}
                 job={job}
+                candidateCount={jobCandidateCounts[job.id] ?? 0}
                 hasAssessment={!!jobHasAssessment[job.id]}
                 onAddAssessment={handleAddAssessment}
                 onView={handleViewJob}

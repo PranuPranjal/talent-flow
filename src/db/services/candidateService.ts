@@ -255,6 +255,12 @@ export class CandidateService {
     return { total, byStage };
   }
 
+  // count candidates for a given job
+  async countCandidatesByJob(jobId: string): Promise<number> {
+    if (!jobId) return 0;
+    return await db.candidates.where('jobId').equals(jobId).count();
+  }
+
   // delete candidate
   async deleteCandidate(id: string): Promise<boolean> {
     await db.transaction('rw', [db.candidates, db.candidateTimeline, db.notes], async () => {

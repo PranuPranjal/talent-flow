@@ -8,13 +8,14 @@ import { FiEye, FiEdit2, FiTrash2, FiClipboard, FiPlus } from 'react-icons/fi';
 interface DraggableJobCardProps {
   job: Job;
   hasAssessment?: boolean;
+  candidateCount?: number;
   onAddAssessment?: (job: Job) => void;
   onView: (job: Job) => void;
   onEdit: (job: Job) => void;
   onDelete: (job: Job) => void;
 }
 
-const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment, onAddAssessment, onView, onEdit, onDelete }) => {
+const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment, candidateCount, onAddAssessment, onView, onEdit, onDelete }) => {
   const {
     attributes,
     listeners,
@@ -65,7 +66,10 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment,
         </span>
       </div>
 
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
+      <div className="flex items-center gap-2 mb-2">
+        <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">{candidateCount ?? 0}</span>
+      </div>
       <p className="text-sm text-gray-600 mb-3">{job.location}</p>
 
       <div className="flex flex-wrap gap-2 mb-4">
