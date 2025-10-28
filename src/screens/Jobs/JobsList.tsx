@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { jobService } from '../../db/services';
@@ -6,6 +7,7 @@ import type { Job } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
 import DraggableJobCard from '../../components/UI/DraggableJobCard';
+import JobModal from '../../components/Jobs/JobModal';
 import { JOB_STATUSES } from '../../utils/constants';
 import { useDebounce } from '../../hooks/useDebounce';
 
@@ -17,6 +19,8 @@ const JobsList: React.FC = () => {
   const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState<string | undefined>(undefined);
   const [isReordering, setIsReordering] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -24,6 +28,7 @@ const JobsList: React.FC = () => {
     total: 0,
     totalPages: 0
   });
+  const navigate = useNavigate();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -95,7 +100,38 @@ const JobsList: React.FC = () => {
   };
 
   const handleViewJob = (job: Job) => {
-    console.log('View job:', job.id);
+    navigate(`/jobs/${job.id}`);
+  };
+
+  const handleOpenModal = () => {
+    setEditingJob(null);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingJob(null);
+  };
+
+  const handleSaveJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (editingJob) {
+      await jobService.updateJob(editingJob.id, jobData);
+    } else {
+      await jobService.createJob(jobData);
+    }
+    await fetchJobs(pagination.page);
+  };
+
+  const handleEditJob = (job: Job) => {
+    setEditingJob(job);
+    setShowModal(true);
+  };
+
+  const handleDeleteJob = async (job: Job) => {
+    const ok = window.confirm(`Delete job "${job.title}"? This cannot be undone.`);
+    if (!ok) return;
+    await jobService.deleteJob(job.id);
+    await fetchJobs(pagination.page);
   };
 
   if (loading) {
@@ -152,9 +188,9 @@ const JobsList: React.FC = () => {
             </select>
           </div>
 
-          <div className="md:self-start">
-            <Button variant="primary">Create Job</Button>
-          </div>
+                  <div className="md:self-start">
+                    <Button variant="primary" onClick={handleOpenModal}>Create Job</Button>
+                  </div>
         </div>
       </div>
 
@@ -171,6 +207,8 @@ const JobsList: React.FC = () => {
                 key={job.id}
                 job={job}
                 onView={handleViewJob}
+                onEdit={handleEditJob}
+                onDelete={handleDeleteJob}
               />
             ))}
           </div>
@@ -223,6 +261,14 @@ const JobsList: React.FC = () => {
           </Button>
         </div>
       )}
+
+      {/* Create/Edit Job Modal */}
+      <JobModal
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onSave={handleSaveJob}
+        job={editingJob}
+      />
     </div>
   );
 };

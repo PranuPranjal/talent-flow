@@ -2,13 +2,17 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Job } from '../../types';
 import Button from './Button';
+import { useNavigate } from 'react-router-dom';
+import { FiEye, FiEdit2, FiTrash2, FiClipboard } from 'react-icons/fi';
 
 interface DraggableJobCardProps {
   job: Job;
   onView: (job: Job) => void;
+  onEdit: (job: Job) => void;
+  onDelete: (job: Job) => void;
 }
 
-const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView }) => {
+const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView, onEdit, onDelete }) => {
   const {
     attributes,
     listeners,
@@ -17,6 +21,8 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView }) => {
     transition,
     isDragging,
   } = useSortable({ id: job.id });
+
+  const navigate = useNavigate();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -29,9 +35,8 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView }) => {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className={`bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-grab active:cursor-grabbing ${
-        isDragging ? 'shadow-2xl' : ''
+      className={`bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow ${
+        isDragging ? 'shadow-2xl opacity-50' : ''
       }`}
     >
       <div className="flex items-start justify-between mb-3">
@@ -42,7 +47,20 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView }) => {
         }`}>
           {job.status}
         </span>
-        <span className="text-sm text-gray-500">#{job.order}</span>
+        <span className="text-sm text-gray-500 flex items-center gap-2">
+          #{job.order}
+          <button
+            type="button"
+            aria-label="Drag job card"
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+            className="p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9h.01M12 9h.01M16 9h.01M8 15h.01M12 15h.01M16 15h.01" />
+            </svg>
+          </button>
+        </span>
       </div>
       
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
@@ -65,26 +83,58 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView }) => {
         <span className="text-sm font-medium text-gray-900">
           ${job.salary?.min.toLocaleString()} - ${job.salary?.max.toLocaleString()}
         </span>
-        <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
+        <div className="flex gap-1">
+          <Button
+            aria-label="Take assessment"
+            title="Assessment"
+            variant="ghost"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              window.location.href = `/assessments/${job.id}/take`;
+              navigate(`/assessments/${job.id}/take`);
             }}
+            className="p-2"
           >
-            Assessment
+            <FiClipboard />
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            aria-label="View job"
+            title="View"
+            variant="ghost"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
               onView(job);
             }}
+            className="p-2"
           >
-            View
+            <FiEye />
+          </Button>
+          <Button
+            aria-label="Edit job"
+            title="Edit"
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(job);
+            }}
+            className="p-2"
+          >
+            <FiEdit2 />
+          </Button>
+          <Button
+            aria-label="Delete job"
+            title="Delete"
+            variant="danger"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(job);
+            }}
+            className="p-2"
+          >
+            <FiTrash2 />
           </Button>
         </div>
       </div>
