@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import type { Candidate } from '../../types';
 import { FiEye, FiTrash2 } from 'react-icons/fi';
 
@@ -19,12 +18,19 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ candidate, onView, onDelete }) 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: candidate.id });
+  } = useSortable({ 
+    id: candidate.id,
+    animateLayoutChanges: () => false
+  });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition: isDragging ? undefined : transition,
+    opacity: isDragging ? 0.8 : 1,
+    cursor: isDragging ? 'grabbing' : 'grab',
+    touchAction: 'none',
+    zIndex: isDragging ? 999 : 1,
+    willChange: 'transform'
   };
 
   const formatDate = (dateString: string) => {

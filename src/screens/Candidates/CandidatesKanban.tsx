@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DndContext, closestCenter } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay, defaultDropAnimationSideEffects,} from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { candidateService } from '../../db/services';
 import type { Candidate } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
 import KanbanColumn from '../../components/Candidates/KanbanColumn';
+import KanbanCard from '../../components/Candidates/KanbanCard';
 import { CANDIDATE_STAGES } from '../../utils/constants';
 
 const CandidatesKanban: React.FC = () => {
@@ -15,6 +17,22 @@ const CandidatesKanban: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 0,
+        delay: 0,
+        tolerance: 0,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const activeCandidate = activeId ? candidates.find(c => c.id === activeId) : null;
 
   const fetchCandidates = async () => {
     try {
@@ -23,7 +41,7 @@ const CandidatesKanban: React.FC = () => {
       
       const response = await candidateService.getCandidates({
         page: 1,
-        pageSize: 1000, // Load all for kanban
+        pageSize: 1000,
       });
       
       setCandidates(response.data);
@@ -174,8 +192,14 @@ const CandidatesKanban: React.FC = () => {
       )}
 
       <DndContext
+        sensors={sensors}
         collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
+        onDragStart={({ active }) => setActiveId(active.id as string)}
+        onDragEnd={(event) => {
+          setActiveId(null);
+          handleDragEnd(event);
+        }}
+        onDragCancel={() => setActiveId(null)}
       >
         <div className="flex gap-6 overflow-x-auto pb-4">
           {CANDIDATE_STAGES.map((stage) => (
@@ -188,6 +212,25 @@ const CandidatesKanban: React.FC = () => {
             />
           ))}
         </div>
+        <DragOverlay dropAnimation={{
+          duration: 50,
+          easing: 'linear',
+          sideEffects: defaultDropAnimationSideEffects({
+            styles: {
+              active: {
+                opacity: '0.8'
+              }
+            }
+          })
+        }}>
+          {activeId && activeCandidate ? (
+            <KanbanCard
+              candidate={activeCandidate}
+              onView={handleViewCandidate}
+              onDelete={handleDeleteCandidate}
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       {candidates.length === 0 && (

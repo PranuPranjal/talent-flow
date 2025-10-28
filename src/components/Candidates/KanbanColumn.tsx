@@ -2,6 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Candidate } from '../../types';
 import KanbanCard from './KanbanCard';
+import { useMemo } from 'react';
 
 interface KanbanColumnProps {
   stage: string;
@@ -13,10 +14,16 @@ interface KanbanColumnProps {
 const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, candidates, onViewCandidate, onDeleteCandidate }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: stage,
+    data: {
+      accepts: ['candidate'],
+      stage
+    }
   });
 
-  // Sort candidates by order within the stage
-  const sortedCandidates = candidates.sort((a, b) => (a.order || 0) - (b.order || 0));
+  const sortedCandidates = useMemo(() => 
+    [...candidates].sort((a, b) => (a.order || 0) - (b.order || 0)),
+    [candidates]
+  );
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -72,8 +79,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, candidates, onViewCa
         
         <div
           ref={setNodeRef}
-          className={`p-4 min-h-96 transition-colors ${
-            isOver ? 'bg-blue-50' : 'bg-gray-50'
+          className={`p-4 min-h-96 transition-all duration-200 ease-in-out ${
+            isOver ? 'bg-blue-50 scale-102' : 'bg-gray-50'
           }`}
         >
           <SortableContext items={sortedCandidates.map(c => c.id)} strategy={verticalListSortingStrategy}>
