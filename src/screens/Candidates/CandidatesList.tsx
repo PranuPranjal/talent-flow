@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { candidateService } from '../../db/services';
 import type { Candidate } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
 import { CANDIDATE_STAGES } from '../../utils/constants';
+import { jobService } from '../../db/services';
 import { useDebounce } from '../../hooks/useDebounce';
 
 const CandidatesList: React.FC = () => {
@@ -23,6 +24,9 @@ const CandidatesList: React.FC = () => {
     totalPages: 0
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobFilter, setJobFilter] = useState<string | undefined>(undefined);
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -52,7 +56,8 @@ const CandidatesList: React.FC = () => {
         page,
         pageSize: pagination.pageSize,
         search: debouncedSearch || undefined,
-        stage
+        stage,
+        jobId: jobFilter
       });
       
       setCandidates(response.data);
@@ -71,8 +76,28 @@ const CandidatesList: React.FC = () => {
   };
 
   useEffect(() => {
+    // check URL param for jobId
+    const params = new URLSearchParams(location.search);
+    const jid = params.get('jobId') || undefined;
+    if (jid) setJobFilter(jid);
+
+    // fetch job list for filter options
+    const loadJobs = async () => {
+      try {
+        const resp = await jobService.getJobs({ page: 1, pageSize: 1000 });
+        setJobs(resp.data || []);
+      } catch (err) {
+        console.error('Failed to load jobs for filter', err);
+      }
+    };
+
+    loadJobs();
     fetchCandidates();
   }, [debouncedSearch, stage]);
+
+  useEffect(() => {
+    fetchCandidates();
+  }, [jobFilter]);
 
   useEffect(() => {
     if (searchInputRef.current && search) {
@@ -136,6 +161,20 @@ const CandidatesList: React.FC = () => {
               <option value="">All Stages</option>
               {CANDIDATE_STAGES.map((s) => (
                 <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Job</label>
+            <select
+              value={jobFilter ?? ''}
+              onChange={(e) => setJobFilter(e.target.value || undefined)}
+              className="w-full md:w-56 rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Jobs</option>
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>{j.title}</option>
               ))}
             </select>
           </div>

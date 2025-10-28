@@ -197,17 +197,22 @@ export class CandidateService {
     page?: number;
     pageSize?: number;
     stages: Candidate['stage'][];
+    jobId?: string;
   }): Promise<Record<Candidate['stage'], PaginatedResponse<Candidate>>> {
     const {
       page = 1,
       pageSize = 50,
-      stages
+      stages,
+      jobId
     } = params;
 
     const results: Record<Candidate['stage'], PaginatedResponse<Candidate>> = {} as Record<Candidate['stage'], PaginatedResponse<Candidate>>;
 
     await Promise.all(stages.map(async (stage) => {
-      const collection = db.candidates.where('stage').equals(stage);
+      let collection = db.candidates.where('stage').equals(stage);
+      if (jobId) {
+        collection = collection.filter(candidate => candidate.jobId === jobId);
+      }
       const total = await collection.count();
       const offset = (page - 1) * pageSize;
       
