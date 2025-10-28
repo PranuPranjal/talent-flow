@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { assessmentService } from '../../db/services';
+import { useAuth } from '../../contexts/AuthContext';
 import type { Assessment, AssessmentQuestion } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
@@ -15,6 +16,7 @@ const AssessmentRuntime: React.FC = () => {
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (jobId) {
@@ -29,6 +31,16 @@ const AssessmentRuntime: React.FC = () => {
       setLoading(true);
       const assessmentData = await assessmentService.getAssessmentByJobId(jobId);
       setAssessment(assessmentData || null);
+      // if logged-in candidate already submitted, mark as submitted to prevent re-taking
+      if (assessmentData && user && user.role === 'candidate') {
+        try {
+          const existing = await assessmentService.getCandidateResponses(user.id);
+          const already = existing.some(r => r.assessmentId === assessmentData.id);
+          if (already) setSubmitted(true);
+        } catch (e) {
+          console.error('Failed to check previous responses', e);
+        }
+      }
     } catch (err) {
       setError('Failed to load assessment');
       console.error('Error fetching assessment:', err);
@@ -142,6 +154,15 @@ const AssessmentRuntime: React.FC = () => {
     if (!assessment || !jobId) return;
 
     try {
+      // prevent duplicate submissions for candidate users
+      if (user && user.role === 'candidate') {
+        const existing = await assessmentService.getCandidateResponses(user.id);
+        const already = existing.some(r => r.assessmentId === assessment.id);
+        if (already) {
+          setError('You have already submitted this assessment.');
+          return;
+        }
+      }
       // Convert responses to appropriate format
       const formattedResponses = Object.fromEntries(
         Object.entries(responses).map(([questionId, value]) => {
@@ -162,10 +183,11 @@ const AssessmentRuntime: React.FC = () => {
         })
       );
 
-      // Store directly in IndexedDB
+      // Store directly in IndexedDB (include candidate info when available)
       await assessmentService.submitAssessmentResponse({
         assessmentId: assessment.id,
-        candidateId: 'current-candidate',
+        candidateId: user?.id || 'unknown',
+        candidateName: user?.name,
         responses: formattedResponses
       });
 

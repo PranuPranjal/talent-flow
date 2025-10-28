@@ -205,7 +205,7 @@ const JobsList: React.FC = () => {
           <p className="text-gray-600">Showing {jobs.length} of {pagination.total} jobs</p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-3 md:items-end">
+              <div className="flex flex-col md:flex-row gap-3 md:items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
             <input

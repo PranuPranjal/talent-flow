@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { DatabaseProvider } from './contexts/DatabaseContext';
+import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
+import Login from './screens/Auth/Login';
+import { RequireAdmin, RequireAuth, CandidateRouteGuard } from './contexts/AuthContext';
 import Home from './screens/Home/Home';
 import JobsList from './screens/Jobs/JobsList';
 import JobDetail from './screens/Jobs/JobDetail';
@@ -18,25 +21,28 @@ import NetworkStatus from './components/UI/NetworkStatus';
 function App() {
   return (
     <DatabaseProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-                      <Route path="jobs" element={<JobsList />} />
-                      <Route path="jobs/:jobId" element={<JobDetail />} />
-              <Route path="candidates" element={<CandidatesList />} />
-              <Route path="candidates/kanban" element={<CandidatesKanban />} />
-              <Route path="candidates/:id" element={<CandidateProfile />} />
-              <Route path="assessments" element={<AssessmentsList />} />
-              <Route path="assessments/:jobId/builder" element={<AssessmentBuilder />} />
-              <Route path="assessments/:jobId/take" element={<AssessmentRuntime />} />
-              <Route path="assessments/:jobId/responses" element={<AssessmentResponses />} />
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<RequireAuth><CandidateRouteGuard><Layout /></CandidateRouteGuard></RequireAuth>}>
+            <Route index element={<Home />} />
+            <Route path="jobs" element={<JobsList />} />
+            <Route path="jobs/:jobId" element={<JobDetail />} />
+            <Route path="candidates" element={<RequireAdmin><CandidatesList /></RequireAdmin>} />
+            <Route path="candidates/kanban" element={<RequireAdmin><CandidatesKanban /></RequireAdmin>} />
+            <Route path="candidates/:id" element={<CandidateProfile />} />
+            <Route path="assessments" element={<RequireAdmin><AssessmentsList /></RequireAdmin>} />
+            <Route path="assessments/:jobId/builder" element={<RequireAdmin><AssessmentBuilder /></RequireAdmin>} />
+            <Route path="assessments/:jobId/take" element={<AssessmentRuntime />} />
+            <Route path="assessments/:jobId/responses" element={<RequireAdmin><AssessmentResponses /></RequireAdmin>} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
         <DatabaseStatus />
         <NetworkStatus />
       </Router>
+      </AuthProvider>
     </DatabaseProvider>
   );
 }
