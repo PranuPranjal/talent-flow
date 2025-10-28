@@ -106,16 +106,24 @@ const AssessmentResponses: React.FC = () => {
 
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900">Responses:</h4>
-                {Object.entries(response.responses).map(([questionId, answer], index) => (
-                  <div key={questionId} className="border-l-4 border-blue-500 pl-4">
-                    <p className="text-sm font-medium text-gray-700">
-                      Question {index + 1}: {questionId}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {String(answer)}
-                    </p>
-                  </div>
-                ))}
+                {Object.entries(response.responses).map(([questionId, answer], index) => {
+                  const displayValue = typeof answer === 'object' && answer !== null 
+                    ? answer.name 
+                      ? `File: ${answer.name} (${Math.round(answer.size / 1024)}KB)` 
+                      : JSON.stringify(answer.value)
+                    : String(answer.value);
+
+                  return (
+                    <div key={questionId} className="border-l-4 border-blue-500 pl-4">
+                      <p className="text-sm font-medium text-gray-700">
+                        Question {index + 1}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {displayValue}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}

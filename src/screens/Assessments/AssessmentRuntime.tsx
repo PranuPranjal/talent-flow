@@ -142,14 +142,34 @@ const AssessmentRuntime: React.FC = () => {
     if (!assessment || !jobId) return;
 
     try {
+      // Convert responses to appropriate format
+      const formattedResponses = Object.fromEntries(
+        Object.entries(responses).map(([questionId, value]) => {
+          const question = assessment.sections
+            .flatMap(s => s.questions)
+            .find(q => q.id === questionId);
+
+          if (question?.type === 'file_upload' && value instanceof File) {
+            return [questionId, {
+              name: value.name,
+              type: value.type,
+              size: value.size
+            }];
+          }
+          
+          if (Array.isArray(value)) {
+            return [questionId, value.join(', ')];
+          }
+
+          return [questionId, value === null ? '' : String(value)];
+        })
+      );
+
       // Store directly in IndexedDB
       await assessmentService.submitAssessmentResponse({
         assessmentId: assessment.id,
         candidateId: 'current-candidate',
-        responses: Object.entries(responses).map(([questionId, value]) => ({
-          questionId,
-          value: Array.isArray(value) ? value.join(', ') : String(value)
-        }))
+        responses: formattedResponses
       });
 
       setSubmitted(true);
@@ -338,6 +358,59 @@ const AssessmentRuntime: React.FC = () => {
                     }`}
                     placeholder="Enter a number"
                   />
+                )}
+
+                {question.type === 'file_upload' && (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-gray-400 transition-colors">
+                    <label className="block">
+                      <input
+                        type="file"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Check file size (10MB limit)
+                            if (file.size > 10 * 1024 * 1024) {
+                              setValidationErrors(prev => ({
+                                ...prev,
+                                [question.id]: 'File size must be less than 10MB'
+                              }));
+                              e.target.value = '';
+                              return;
+                            }
+                            handleResponseChange(question.id, file);
+                          }
+                        }}
+                        className="block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-full file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-blue-50 file:text-blue-700
+                          hover:file:bg-blue-100
+                          cursor-pointer"
+                        accept=".pdf,.doc,.docx,.txt"
+                      />
+                      <p className="mt-2 text-xs text-gray-500">
+                        Supported formats: PDF, DOC, DOCX, TXT. Maximum file size: 10MB
+                      </p>
+                    </label>
+                    {responses[question.id] && (
+                      <div className="mt-2 flex items-center">
+                        <span className="text-sm text-gray-600">
+                          Selected: {(responses[question.id] as File).name}
+                        </span>
+                        <button
+                          onClick={() => {
+                            handleResponseChange(question.id, null);
+                            const input = document.querySelector(`input[type="file"]`) as HTMLInputElement;
+                            if (input) input.value = '';
+                          }}
+                          className="ml-2 text-sm text-red-600 hover:text-red-800"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {validationErrors[question.id] && (
