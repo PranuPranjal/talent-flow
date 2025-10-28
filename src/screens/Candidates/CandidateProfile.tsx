@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { candidateService, jobService } from '../../db/services';
 import type { Candidate, CandidateTimelineEvent, Note } from '../../types';
@@ -17,6 +17,24 @@ const CandidateProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const noteInputRef = useRef<HTMLTextAreaElement>(null);
+  const mentionUsers = useMemo(() => [
+    { id: 'u1', name: 'Pranu Pranjal' },
+    { id: 'u2', name: 'Priya Shah' },
+    { id: 'u3', name: 'Divyanshu Bajpai' },
+    { id: 'u4', name: 'Chinmay Kumar Singh' },
+    { id: 'u5', name: 'Indrajeet Banerjee' }
+  ], []);
+  const nameToId = useMemo(() => Object.fromEntries(mentionUsers.map(u => [u.name, u.id])), [mentionUsers]);
+  const currentMentionQuery = useMemo(() => {
+    const match = newNote.match(/@([^\s@]{0,30})$/);
+    return match ? match[1] : '';
+  }, [newNote]);
+  const mentionSuggestions = useMemo(() => {
+    if (!currentMentionQuery) return [] as { id: string; name: string }[];
+    const q = currentMentionQuery.toLowerCase();
+    return mentionUsers.filter(u => u.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [currentMentionQuery, mentionUsers]);
 
   useEffect(() => {
     if (id) {
@@ -59,14 +77,35 @@ const CandidateProfile: React.FC = () => {
     }
   };
 
+  const extractMentions = (text: string): string[] => {
+    const names = Array.from(text.matchAll(/@([A-Za-z][A-Za-z\s]{0,48}[A-Za-z])/g)).map(m => m[1].trim());
+    const ids = names.map(n => nameToId[n]).filter(Boolean) as string[];
+    return Array.from(new Set(ids));
+  };
+
+  const insertMention = (name: string) => {
+    const ta = noteInputRef.current;
+    const atText = `@${name}`;
+    if (!ta) {
+      setNewNote(prev => prev.replace(/@([^\s@]{0,30})$/, atText + ' '));
+      return;
+    }
+    const start = ta.selectionStart ?? newNote.length;
+    const before = newNote.slice(0, start).replace(/@([^\s@]{0,30})$/, atText + ' ');
+    const after = newNote.slice(start);
+    setNewNote(before + after);
+    requestAnimationFrame(() => ta.focus());
+  };
+
   const handleAddNote = async () => {
     if (!id || !newNote.trim()) return;
 
     try {
+      const mentions = extractMentions(newNote);
       const note = await candidateService.addNote(id, {
         content: newNote.trim(),
         createdBy: 'current-user', // TODO: Get from auth context
-        mentions: [] // TODO: Extract mentions from content
+        mentions
       });
 
       setNotes(prev => [note, ...prev]);
@@ -304,12 +343,27 @@ const CandidateProfile: React.FC = () => {
               Note Content
             </label>
             <textarea
+              ref={noteInputRef}
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
               placeholder="Add your note here..."
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={4}
             />
+            {mentionSuggestions.length > 0 && (
+              <div className="mt-2 border border-gray-200 rounded-md bg-white shadow-sm">
+                {mentionSuggestions.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => insertMention(s.name)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    @{s.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button 
