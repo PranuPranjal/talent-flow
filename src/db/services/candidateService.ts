@@ -44,9 +44,15 @@ export class CandidateService {
     // apply pagination
     const offset = (page - 1) * pageSize;
     const data = await collection.offset(offset).limit(pageSize).toArray();
+    
+    // Sort by order within each stage
+    const sortedData = data.sort((a, b) => {
+      if (a.stage !== b.stage) return 0; // Don't sort across stages
+      return (a.order || 0) - (b.order || 0);
+    });
 
     return {
-      data,
+      data: sortedData,
       pagination: {
         page,
         pageSize,
@@ -55,6 +61,8 @@ export class CandidateService {
       }
     };
   }
+
+
 
   // single candidate by ID
   async getCandidateById(id: string): Promise<Candidate | undefined> {
@@ -96,6 +104,20 @@ export class CandidateService {
 
     await db.candidates.put(updatedCandidate);
     return updatedCandidate;
+  }
+
+  // reorder candidates within a stage
+  async reorderCandidatesInStage(_stage: string, candidateIds: string[]): Promise<void> {
+    await db.transaction('rw', db.candidates, async () => {
+      const updates = candidateIds.map((id, index) => ({
+        id,
+        order: index
+      }));
+
+      for (const update of updates) {
+        await db.candidates.update(update.id, { order: update.order });
+      }
+    });
   }
 
   // update candidate stage
@@ -170,10 +192,45 @@ export class CandidateService {
     return note;
   }
 
-  // get candidates by stage
-  async getCandidatesByStage(stage: Candidate['stage']): Promise<Candidate[]> {
-    return await db.candidates.where('stage').equals(stage).toArray();
+  // get candidates by stage with pagination
+  async getCandidatesByStages(params: {
+    page?: number;
+    pageSize?: number;
+    stages: Candidate['stage'][];
+  }): Promise<Record<Candidate['stage'], PaginatedResponse<Candidate>>> {
+    const {
+      page = 1,
+      pageSize = 50,
+      stages
+    } = params;
+
+    const results: Record<Candidate['stage'], PaginatedResponse<Candidate>> = {} as Record<Candidate['stage'], PaginatedResponse<Candidate>>;
+
+    await Promise.all(stages.map(async (stage) => {
+      const collection = db.candidates.where('stage').equals(stage);
+      const total = await collection.count();
+      const offset = (page - 1) * pageSize;
+      
+      const data = await collection
+        .offset(offset)
+        .limit(pageSize)
+        .toArray();
+
+      results[stage] = {
+        data: data.sort((a: Candidate, b: Candidate) => (a.order || 0) - (b.order || 0)),
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize)
+        }
+      };
+    }));
+
+    return results;
   }
+
+
 
   // get candidate statistics
   async getCandidateStats(): Promise<{

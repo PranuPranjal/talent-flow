@@ -1,6 +1,30 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { db, jobService } from '../../db/services';
 
 const Home: React.FC = () => {
+  const [activeJobs, setActiveJobs] = useState(0);
+  const [totalCandidates, setTotalCandidates] = useState(0);
+  const [totalAssessments, setTotalAssessments] = useState(0);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const stats = await jobService.getJobStats();
+        setActiveJobs(stats.active);
+      } catch {}
+      try {
+        const cand = await db.candidates.count();
+        setTotalCandidates(cand);
+      } catch {}
+      try {
+        const ass = await db.assessments.count();
+        setTotalAssessments(ass);
+      } catch {}
+    };
+    load();
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Hero section */}
@@ -24,7 +48,7 @@ const Home: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Active Jobs</p>
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-2xl font-bold text-gray-900">{activeJobs}</p>
             </div>
           </div>
         </div>
@@ -38,7 +62,7 @@ const Home: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Candidates</p>
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-2xl font-bold text-gray-900">{totalCandidates}</p>
             </div>
           </div>
         </div>
@@ -52,7 +76,7 @@ const Home: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Assessments</p>
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-2xl font-bold text-gray-900">{totalAssessments}</p>
             </div>
           </div>
         </div>
