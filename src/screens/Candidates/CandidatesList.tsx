@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { List } from 'react-virtualized';
-import 'react-virtualized/styles.css';
 import { candidateService } from '../../db/services';
 import type { Candidate } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
-import CandidateRow from '../../components/Candidates/CandidateRow';
 import { CANDIDATE_STAGES } from '../../utils/constants';
 import { useDebounce } from '../../hooks/useDebounce';
 
@@ -18,23 +15,52 @@ const CandidatesList: React.FC = () => {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [stage, setStage] = useState<string | undefined>(undefined);
-  const [totalCount, setTotalCount] = useState(0);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    totalPages: 0
+  });
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchCandidates = async () => {
+  const getStageColor = (stage: string) => {
+    switch (stage) {
+      case 'applied':
+        return 'bg-blue-100 text-blue-800';
+      case 'screen':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'tech':
+        return 'bg-purple-100 text-purple-800';
+      case 'offer':
+        return 'bg-green-100 text-green-800';
+      case 'hired':
+        return 'bg-emerald-100 text-emerald-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const fetchCandidates = async (page = pagination.page) => {
     try {
       setLoading(true);
       setError(null);
       
       const response = await candidateService.getCandidates({
-        page: 1,
-        pageSize: 1000,
+        page,
+        pageSize: pagination.pageSize,
         search: debouncedSearch || undefined,
         stage
       });
       
       setCandidates(response.data);
-      setTotalCount(response.pagination.total);
+      setPagination(prev => ({
+        ...prev,
+        page,
+        total: response.pagination.total,
+        totalPages: Math.ceil(response.pagination.total / pagination.pageSize)
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load candidates');
       console.error('Error fetching candidates:', err);
@@ -53,25 +79,8 @@ const CandidatesList: React.FC = () => {
     }
   }, [candidates, search]); 
 
-  const handleViewCandidate = (candidate: Candidate) => {
-    console.log('View candidate:', candidate.id);
-  };
-
-  const filteredCandidates = candidates;
-
-  const rowRenderer = ({ index, key, style }: any) => {
-    return (
-      <div key={key} style={style}>
-        <CandidateRow
-          index={index}
-          style={{}}
-          data={{
-            candidates: filteredCandidates,
-            onViewCandidate: handleViewCandidate
-          }}
-        />
-      </div>
-    );
+  const handleViewCandidate = (candidateId: string) => {
+    navigate(`/candidates/${candidateId}`);
   };
 
   if (loading) {
@@ -98,7 +107,9 @@ const CandidatesList: React.FC = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-gray-900">Candidates</h1>
-          <p className="text-gray-600">Showing {filteredCandidates.length} of {totalCount} candidates</p>
+          <p className="text-gray-600">
+            Showing {((pagination.page - 1) * pagination.pageSize) + 1}-{Math.min(pagination.page * pagination.pageSize, pagination.total)} of {pagination.total} candidates
+          </p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-3 md:items-end">
@@ -142,36 +153,79 @@ const CandidatesList: React.FC = () => {
         </div>
       </div>
 
-      {/* Virtualized Candidates List */}
-      {filteredCandidates.length > 0 ? (
-        <div className="bg-white rounded-lg shadow border border-gray-200">
-          <div className="h-96">
-            <List
-              width={800}
-              height={384}
-              rowCount={filteredCandidates.length}
-              rowHeight={120}
-              rowRenderer={rowRenderer}
-              overscanRowCount={3}
-            />
-          </div>
+      <div className="bg-white overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+        <div className="min-h-[600px] overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-300">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
+                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
+                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Phone</th>
+                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Stage</th>
+                <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {candidates.map((candidate) => (
+                <tr key={candidate.id} className="hover:bg-gray-50">
+                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                    {candidate.name}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{candidate.email}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{candidate.phone}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStageColor(candidate.stage)}`}>
+                      {candidate.stage.charAt(0).toUpperCase() + candidate.stage.slice(1)}
+                    </span>
+                  </td>
+                  <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleViewCandidate(candidate.id)}
+                    >
+                      View
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {candidates.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500">
+                    {search || stage ? 
+                      'Try adjusting your search or filter criteria' : 
+                      'Get started by adding your first candidate'
+                    }
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow p-12">
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No candidates found</h3>
-            <p className="text-gray-500 mb-4">
-              {search || stage ? 'Try adjusting your search or filter criteria' : 'Get started by adding your first candidate'}
-            </p>
-            {!search && !stage && (
-              <Button variant="primary">Add Candidate</Button>
-            )}
-          </div>
+      </div>
+      
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => fetchCandidates(pagination.page - 1)}
+            disabled={pagination.page === 1 || loading}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-gray-600">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => fetchCandidates(pagination.page + 1)}
+            disabled={pagination.page === pagination.totalPages || loading}
+          >
+            Next
+          </Button>
         </div>
       )}
     </div>
