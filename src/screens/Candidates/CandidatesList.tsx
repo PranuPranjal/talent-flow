@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { candidateService } from '../../db/services';
 import type { Candidate } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
 import { CANDIDATE_STAGES } from '../../utils/constants';
+import { jobService } from '../../db/services';
 import { useDebounce } from '../../hooks/useDebounce';
 
 const CandidatesList: React.FC = () => {
@@ -15,6 +16,7 @@ const CandidatesList: React.FC = () => {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [stage, setStage] = useState<string | undefined>(undefined);
+  const [exportStage, setExportStage] = useState<string | undefined>(undefined);
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
@@ -22,6 +24,9 @@ const CandidatesList: React.FC = () => {
     totalPages: 0
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobFilter, setJobFilter] = useState<string | undefined>(undefined);
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -51,7 +56,8 @@ const CandidatesList: React.FC = () => {
         page,
         pageSize: pagination.pageSize,
         search: debouncedSearch || undefined,
-        stage
+        stage,
+        jobId: jobFilter
       });
       
       setCandidates(response.data);
@@ -70,8 +76,28 @@ const CandidatesList: React.FC = () => {
   };
 
   useEffect(() => {
+    // check URL param for jobId
+    const params = new URLSearchParams(location.search);
+    const jid = params.get('jobId') || undefined;
+    if (jid) setJobFilter(jid);
+
+    // fetch job list for filter options
+    const loadJobs = async () => {
+      try {
+        const resp = await jobService.getJobs({ page: 1, pageSize: 1000 });
+        setJobs(resp.data || []);
+      } catch (err) {
+        console.error('Failed to load jobs for filter', err);
+      }
+    };
+
+    loadJobs();
     fetchCandidates();
   }, [debouncedSearch, stage]);
+
+  useEffect(() => {
+    fetchCandidates();
+  }, [jobFilter]);
 
   useEffect(() => {
     if (searchInputRef.current && search) {
@@ -139,6 +165,90 @@ const CandidatesList: React.FC = () => {
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Job</label>
+            <select
+              value={jobFilter ?? ''}
+              onChange={(e) => setJobFilter(e.target.value || undefined)}
+              className="w-full md:w-56 rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Jobs</option>
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>{j.title}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Export</label>
+            <div className="flex gap-2">
+              <select
+                value={exportStage ?? ''}
+                onChange={(e) => setExportStage(e.target.value || undefined)}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All</option>
+                {CANDIDATE_STAGES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  try {
+                    // fetch all matching candidates (large pageSize)
+                    const resp = await candidateService.getCandidates({ page: 1, pageSize: 10000, stage: exportStage });
+                    const rows = resp.data || [];
+
+                    if (rows.length === 0) {
+                      alert('No candidates to export for selected filter');
+                      return;
+                    }
+
+                    // build CSV
+                    const headers = ['Name','Email','Phone','Stage','Applied At','Experience','Skills','Resume'];
+                    const escape = (v: any) => {
+                      if (v === null || v === undefined) return '';
+                      const s = typeof v === 'string' ? v : String(v);
+                      // escape quotes
+                      return `"${s.replace(/"/g, '""')}"`;
+                    };
+
+                    const csv = [headers.join(',')].concat(rows.map(c => {
+                      return [
+                        escape(c.name),
+                        escape(c.email),
+                        escape(c.phone || ''),
+                        escape(c.stage),
+                        escape(c.appliedAt),
+                        escape(c.experience ?? ''),
+                        escape((c.skills || []).join('; ')),
+                        escape(c.resume || '')
+                      ].join(',');
+                    })).join('\n');
+
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const now = new Date().toISOString().slice(0,10);
+                    const stageName = exportStage || 'all';
+                    link.href = url;
+                    link.setAttribute('download', `candidates_${stageName}_${now}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                  } catch (err) {
+                    console.error('Export failed', err);
+                    alert('Failed to export candidates');
+                  }
+                }}
+              >
+                Export
+              </Button>
+            </div>
+          </div>
+
           <div className="md:self-start">
             <div className="flex gap-2">
               <Button 
@@ -147,7 +257,6 @@ const CandidatesList: React.FC = () => {
               >
                 Kanban View
               </Button>
-              <Button variant="primary">Add Candidate</Button>
             </div>
           </div>
         </div>

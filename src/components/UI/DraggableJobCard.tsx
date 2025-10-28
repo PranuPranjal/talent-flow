@@ -3,16 +3,19 @@ import { CSS } from '@dnd-kit/utilities';
 import type { Job } from '../../types';
 import Button from './Button';
 import { useNavigate } from 'react-router-dom';
-import { FiEye, FiEdit2, FiTrash2, FiClipboard } from 'react-icons/fi';
+import { FiEye, FiEdit2, FiTrash2, FiClipboard, FiPlus } from 'react-icons/fi';
 
 interface DraggableJobCardProps {
   job: Job;
+  hasAssessment?: boolean;
+  candidateCount?: number;
+  onAddAssessment?: (job: Job) => void;
   onView: (job: Job) => void;
   onEdit: (job: Job) => void;
   onDelete: (job: Job) => void;
 }
 
-const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView, onEdit, onDelete }) => {
+const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment, candidateCount, onAddAssessment, onView, onEdit, onDelete }) => {
   const {
     attributes,
     listeners,
@@ -41,8 +44,8 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView, onEdit
     >
       <div className="flex items-start justify-between mb-3">
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          job.status === 'active' 
-            ? 'bg-green-100 text-green-800' 
+          job.status === 'active'
+            ? 'bg-green-100 text-green-800'
             : 'bg-gray-100 text-gray-800'
         }`}>
           {job.status}
@@ -54,18 +57,21 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView, onEdit
             aria-label="Drag job card"
             {...listeners}
             onClick={(e) => e.stopPropagation()}
-            className="p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
+            className="p-2 text-gray-600 hover:text-gray-800 cursor-grab active:cursor-grabbing bg-gray-50 rounded-md shadow-sm"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9h.01M12 9h.01M16 9h.01M8 15h.01M12 15h.01M16 15h.01" />
             </svg>
           </button>
         </span>
       </div>
-      
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
+
+      <div className="flex items-center gap-2 mb-2">
+        <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">{candidateCount ?? 0}</span>
+      </div>
       <p className="text-sm text-gray-600 mb-3">{job.location}</p>
-      
+
       <div className="flex flex-wrap gap-2 mb-4">
         {job.tags.slice(0, 3).map((tag) => (
           <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
@@ -84,19 +90,35 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, onView, onEdit
           ${job.salary?.min.toLocaleString()} - ${job.salary?.max.toLocaleString()}
         </span>
         <div className="flex gap-1">
-          <Button
-            aria-label="Take assessment"
-            title="Assessment"
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/assessments/${job.id}/take`);
-            }}
-            className="p-2"
-          >
-            <FiClipboard />
-          </Button>
+          {hasAssessment ? (
+            <Button
+              aria-label="Take assessment"
+              title="Assessment"
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/assessments/${job.id}/take`);
+              }}
+              className="p-2"
+            >
+              <FiClipboard />
+            </Button>
+          ) : (
+            <Button
+              aria-label="Add assessment"
+              title="Add assessment"
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddAssessment?.(job);
+              }}
+              className="p-2"
+            >
+              <FiPlus />
+            </Button>
+          )}
           <Button
             aria-label="View job"
             title="View"

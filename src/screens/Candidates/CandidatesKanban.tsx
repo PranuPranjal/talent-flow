@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay, defaultDropAnimationSideEffects,} from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { candidateService } from '../../db/services';
+import { jobService } from '../../db/services';
 import type { Candidate } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
@@ -13,6 +14,7 @@ import { CANDIDATE_STAGES } from '../../utils/constants';
 
 const CandidatesKanban: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [candidatesByStage, setCandidatesByStage] = useState<Record<string, Candidate[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +23,8 @@ const CandidatesKanban: React.FC = () => {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [stageStats, setStageStats] = useState<Record<string, { total: number; hasMore: boolean }>>({});
+  const [jobFilter, setJobFilter] = useState<string | undefined>(undefined);
+  const [jobs, setJobs] = useState<any[]>([]);
   
   // calculate maximum total pages across all stages
   const totalPages = Math.max(
@@ -54,7 +58,8 @@ const CandidatesKanban: React.FC = () => {
       const response = await candidateService.getCandidatesByStages({
         page: currentPage,
         pageSize,
-        stages: [...CANDIDATE_STAGES] as Candidate['stage'][]
+        stages: [...CANDIDATE_STAGES] as Candidate['stage'][],
+        jobId: jobFilter
       });
       
       const newCandidatesByStage = { ...candidatesByStage };
@@ -82,8 +87,28 @@ const CandidatesKanban: React.FC = () => {
   };
 
   useEffect(() => {
+      // check URL param for jobId
+      const params = new URLSearchParams(location.search);
+      const jid = params.get('jobId') || undefined;
+      if (jid) setJobFilter(jid);
+
+      // load jobs for filter
+      const loadJobs = async () => {
+      try {
+        const resp = await jobService.getJobs({ page: 1, pageSize: 1000 });
+        setJobs(resp.data || []);
+      } catch (err) {
+        console.error('Failed to load jobs for filter', err);
+      }
+    };
+    loadJobs();
+
     fetchCandidates(1);
   }, []); 
+
+  useEffect(() => {
+    fetchCandidates(1);
+  }, [jobFilter]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -138,10 +163,10 @@ const CandidatesKanban: React.FC = () => {
       setIsUpdating(true);
 
       try {
-        await candidateService.updateCandidate(candidateId, { 
-          stage: targetCandidate.stage as Candidate['stage'],
-          order: 0
-        });
+        // use updateCandidateStage so a timeline event is created
+        await candidateService.updateCandidateStage(candidateId, targetCandidate.stage as Candidate['stage']);
+        // ensure ordering resets for the moved candidate
+        await candidateService.updateCandidate(candidateId, { order: 0 });
         await fetchCandidates(page); // Refresh current page
       } catch (error) {
         console.error('Failed to update candidate stage:', error);
@@ -198,7 +223,19 @@ const CandidatesKanban: React.FC = () => {
           >
             List View
           </Button>
-          <Button variant="primary">Add Candidate</Button>
+          <div className="flex items-center">
+            <label className="text-sm text-gray-700 mr-2">Job</label>
+            <select
+              value={jobFilter ?? ''}
+              onChange={(e) => setJobFilter(e.target.value || undefined)}
+              className="rounded-md border border-gray-300 px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Jobs</option>
+              {jobs.map(j => (
+                <option key={j.id} value={j.id}>{j.title}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -285,7 +322,6 @@ const CandidatesKanban: React.FC = () => {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No candidates yet</h3>
             <p className="text-gray-500 mb-4">Get started by adding your first candidate</p>
-            <Button variant="primary">Add Candidate</Button>
           </div>
         </div>
       )}

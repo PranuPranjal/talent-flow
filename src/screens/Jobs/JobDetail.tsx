@@ -82,6 +82,12 @@ const JobDetail: React.FC = () => {
           <Button variant="primary" onClick={() => navigate(`/assessments/${job.id}/take`)}>
             Take Assessment
           </Button>
+          <Button variant="secondary" onClick={() => navigate(`/candidates?jobId=${job.id}`)}>
+            View Applied Candidates (List)
+          </Button>
+          <Button variant="secondary" onClick={() => navigate(`/candidates/kanban?jobId=${job.id}`)}>
+            View Applied Candidates (Kanban)
+          </Button>
         </div>
       </div>
 

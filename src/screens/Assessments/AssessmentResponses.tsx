@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { assessmentService } from '../../db/services';
-import type { AssessmentResponse } from '../../types';
+import type { Assessment, AssessmentResponse } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
 
 const AssessmentResponses: React.FC = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const [responses, setResponses] = useState<AssessmentResponse[]>([]);
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,12 +25,13 @@ const AssessmentResponses: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const assessment = await assessmentService.getAssessmentByJobId(jobId);
-      if (!assessment) {
+      const fetchedAssessment = await assessmentService.getAssessmentByJobId(jobId);
+      if (!fetchedAssessment) {
         setError('Assessment not found');
         return;
       }
-      const assessmentResponses = await assessmentService.getAssessmentResponses(assessment.id);
+      setAssessment(fetchedAssessment);
+      const assessmentResponses = await assessmentService.getAssessmentResponses(fetchedAssessment.id);
       setResponses(assessmentResponses);
     } catch (err) {
       setError('Failed to load responses');
@@ -96,26 +98,67 @@ const AssessmentResponses: React.FC = () => {
                   <p className="text-sm text-gray-500">
                     Completed: {formatDate(response.completedAt)}
                   </p>
-                  {response.score !== undefined && (
-                    <p className="text-sm font-medium text-blue-600">
-                      Score: {response.score}
-                    </p>
-                  )}
                 </div>
               </div>
 
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900">Responses:</h4>
-                {Object.entries(response.responses).map(([questionId, answer], index) => (
-                  <div key={questionId} className="border-l-4 border-blue-500 pl-4">
-                    <p className="text-sm font-medium text-gray-700">
-                      Question {index + 1}: {questionId}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {String(answer)}
-                    </p>
-                  </div>
-                ))}
+                {Object.entries(response.responses).map(([questionId, answer], index) => {
+                  // handle file blobs / File objects
+                  const isObject = typeof answer === 'object' && answer !== null;
+                  const hasFileMeta = isObject && 'name' in (answer as any);
+
+                  let content: any;
+
+                  if (isObject && (answer instanceof Blob || 'data' in (answer as any) || hasFileMeta)) {
+                    let blob: Blob | null = null;
+                    let name = (answer as any).name || 'file';
+
+                    if (answer instanceof Blob) {
+                      blob = answer as Blob;
+                    } else if ((answer as any).data instanceof Blob) {
+                      blob = (answer as any).data as Blob;
+                    }
+
+                    if (blob) {
+                      const url = URL.createObjectURL(blob);
+                      content = (
+                        <a
+                          href={url}
+                          download={name}
+                          onClick={() => setTimeout(() => URL.revokeObjectURL(url), 10000)}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {`Download ${name} (${Math.round(((answer as any).size || blob.size) / 1024)} KB)`}
+                        </a>
+                      );
+                    } else {
+                      // metadata-only: show name/type/size but no download
+                      content = (
+                        <div className="text-sm text-gray-600">
+                          {`File: ${name} ${((answer as any).size ? `(${Math.round((answer as any).size / 1024)} KB)` : '')} (file content not available)`}
+                        </div>
+                      );
+                    }
+                  } else if (isObject) {
+                    content = <pre className="whitespace-pre-wrap text-sm text-gray-600">{JSON.stringify(answer)}</pre>;
+                  } else {
+                    content = String(answer ?? '');
+                  }
+
+                  const question = assessment?.sections
+                    .flatMap(s => s.questions)
+                    .find(q => q.id === questionId);
+
+                  return (
+                    <div key={questionId} className="border-l-4 border-blue-500 pl-4">
+                      <p className="text-sm font-medium text-gray-700">
+                        Question {question?.order ?? index + 1}: {question?.title ?? questionId}
+                      </p>
+                      <div className="text-sm text-gray-600 mt-1">{content}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
