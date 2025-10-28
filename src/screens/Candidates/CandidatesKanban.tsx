@@ -115,7 +115,13 @@ const CandidatesKanban: React.FC = () => {
   };
 
   const handleViewCandidate = (candidate: Candidate) => {
-    console.log('View candidate:', candidate.id);
+    navigate(`/candidates/${candidate.id}`);
+  };
+  const handleDeleteCandidate = async (candidate: Candidate) => {
+    const ok = window.confirm(`Delete candidate "${candidate.name}"?`);
+    if (!ok) return;
+    await candidateService.deleteCandidate(candidate.id);
+    await fetchCandidates();
   };
   const candidatesByStage = CANDIDATE_STAGES.reduce((acc, stage) => {
     acc[stage] = candidates.filter(candidate => candidate.stage === stage);
@@ -178,6 +184,7 @@ const CandidatesKanban: React.FC = () => {
               stage={stage}
               candidates={candidatesByStage[stage] || []}
               onViewCandidate={handleViewCandidate}
+              onDeleteCandidate={handleDeleteCandidate}
             />
           ))}
         </div>

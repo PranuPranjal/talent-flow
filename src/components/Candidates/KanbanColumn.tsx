@@ -7,9 +7,10 @@ interface KanbanColumnProps {
   stage: string;
   candidates: Candidate[];
   onViewCandidate: (candidate: Candidate) => void;
+  onDeleteCandidate?: (candidate: Candidate) => void;
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, candidates, onViewCandidate }) => {
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, candidates, onViewCandidate, onDeleteCandidate }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: stage,
   });
@@ -78,10 +79,11 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, candidates, onViewCa
           <SortableContext items={sortedCandidates.map(c => c.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
               {sortedCandidates.map((candidate) => (
-                <KanbanCard
+                    <KanbanCard
                   key={candidate.id}
                   candidate={candidate}
-                  onView={onViewCandidate}
+                      onView={onViewCandidate}
+                      onDelete={onDeleteCandidate}
                 />
               ))}
               
