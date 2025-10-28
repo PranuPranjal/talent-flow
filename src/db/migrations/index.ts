@@ -30,7 +30,7 @@ export const migrations: Migration[] = [
 
       // Update candidates with order values
       await Promise.all(
-        Object.values(candidatesByStage).flatMap((stageCandidates, stageIndex) =>
+        Object.values(candidatesByStage).flatMap((stageCandidates) =>
           stageCandidates.map((candidate, index) =>
             db.candidates.update(candidate.id, { order: index })
           )

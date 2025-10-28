@@ -19,7 +19,7 @@ const CandidatesKanban: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const pageSize = 50;
+  const pageSize = 10;
   const [stageStats, setStageStats] = useState<Record<string, { total: number; hasMore: boolean }>>({});
   
   // calculate maximum total pages across all stages
@@ -65,8 +65,8 @@ const CandidatesKanban: React.FC = () => {
 
         newStageStats[stage] = {
           total: stageData.pagination.total,
-          hasMore: stageData.data.length === 50 && 
-            currentPage * 50 < stageData.pagination.total
+          hasMore: stageData.data.length === pageSize && 
+            currentPage * pageSize < stageData.pagination.total
         };
       });
 
