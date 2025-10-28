@@ -13,11 +13,22 @@ import { CANDIDATE_STAGES } from '../../utils/constants';
 
 const CandidatesKanban: React.FC = () => {
   const navigate = useNavigate();
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidatesByStage, setCandidatesByStage] = useState<Record<string, Candidate[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+  const [stageStats, setStageStats] = useState<Record<string, { total: number; hasMore: boolean }>>({});
+  
+  // calculate maximum total pages across all stages
+  const totalPages = Math.max(
+    ...Object.values(stageStats).map(stats => 
+      Math.ceil(stats.total / pageSize)
+    ),
+    0
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -32,19 +43,36 @@ const CandidatesKanban: React.FC = () => {
     })
   );
 
-  const activeCandidate = activeId ? candidates.find(c => c.id === activeId) : null;
+  const allCandidates = Object.values(candidatesByStage).flat();
+  const activeCandidate = activeId ? allCandidates.find(c => c.id === activeId) : null;
 
-  const fetchCandidates = async () => {
+  const fetchCandidates = async (currentPage = page) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await candidateService.getCandidates({
-        page: 1,
-        pageSize: 1000,
+      const response = await candidateService.getCandidatesByStages({
+        page: currentPage,
+        pageSize,
+        stages: [...CANDIDATE_STAGES] as Candidate['stage'][]
       });
       
-      setCandidates(response.data);
+      const newCandidatesByStage = { ...candidatesByStage };
+      const newStageStats = { ...stageStats };
+
+      Object.entries(response).forEach(([stage, stageData]) => {
+        newCandidatesByStage[stage] = stageData.data;
+
+        newStageStats[stage] = {
+          total: stageData.pagination.total,
+          hasMore: stageData.data.length === 50 && 
+            currentPage * 50 < stageData.pagination.total
+        };
+      });
+
+      setCandidatesByStage(newCandidatesByStage);
+      setStageStats(newStageStats);
+      setPage(currentPage);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load candidates');
       console.error('Error fetching candidates:', err);
@@ -54,8 +82,8 @@ const CandidatesKanban: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchCandidates();
-  }, []);
+    fetchCandidates(1);
+  }, []); 
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -65,16 +93,22 @@ const CandidatesKanban: React.FC = () => {
     const candidateId = active.id as string;
     const overId = over.id as string;
 
-    // Check if dropping on another candidate (swap positions)
-    const targetCandidate = candidates.find(c => c.id === overId);
-    const draggedCandidate = candidates.find(c => c.id === candidateId);
+    const targetCandidateStage = Object.keys(candidatesByStage).find(stage => 
+      candidatesByStage[stage].some(c => c.id === overId)
+    );
+    const draggedCandidateStage = Object.keys(candidatesByStage).find(stage => 
+      candidatesByStage[stage].some(c => c.id === candidateId)
+    );
     
+    if (!targetCandidateStage || !draggedCandidateStage) return;
+
+    const targetCandidate = candidatesByStage[targetCandidateStage].find(c => c.id === overId);
+    const draggedCandidate = candidatesByStage[draggedCandidateStage].find(c => c.id === candidateId);
+
     if (!targetCandidate || !draggedCandidate) return;
 
-    // If dropping on a candidate in the same stage, swap positions
     if (targetCandidate.stage === draggedCandidate.stage) {
-      const stageCandidates = candidates
-        .filter(c => c.stage === draggedCandidate.stage)
+      const stageCandidates = [...candidatesByStage[targetCandidate.stage]]
         .sort((a, b) => (a.order || 0) - (b.order || 0));
       
       const draggedIndex = stageCandidates.findIndex(c => c.id === candidateId);
@@ -82,39 +116,25 @@ const CandidatesKanban: React.FC = () => {
       
       if (draggedIndex === -1 || targetIndex === -1) return;
 
-      // Swap positions
       const newStageCandidates = [...stageCandidates];
       [newStageCandidates[draggedIndex], newStageCandidates[targetIndex]] = 
       [newStageCandidates[targetIndex], newStageCandidates[draggedIndex]];
 
-      // Update order values
-      const updatedCandidates = candidates.map(candidate => {
-        if (candidate.stage === draggedCandidate.stage) {
-          const newIndex = newStageCandidates.findIndex(nc => nc.id === candidate.id);
-          return { ...candidate, order: newIndex };
-        }
-        return candidate;
-      });
-
-      setCandidates(updatedCandidates);
+      // update state
       setIsUpdating(true);
 
       try {
         const candidateIds = newStageCandidates.map(c => c.id);
         await candidateService.reorderCandidatesInStage(draggedCandidate.stage, candidateIds);
+        await fetchCandidates(page); // Refresh current page to ensure order is consistent
       } catch (error) {
         console.error('Failed to reorder candidates:', error);
-        setCandidates(candidates);
         setError('Failed to reorder candidates. Please try again.');
       } finally {
         setIsUpdating(false);
       }
     } else {
-      // Moving to different stage
-      const updatedCandidates = candidates.map(c => 
-        c.id === candidateId ? { ...c, stage: targetCandidate.stage as Candidate['stage'], order: 0 } : c
-      );
-      setCandidates(updatedCandidates);
+      // moving to different stage
       setIsUpdating(true);
 
       try {
@@ -122,9 +142,9 @@ const CandidatesKanban: React.FC = () => {
           stage: targetCandidate.stage as Candidate['stage'],
           order: 0
         });
+        await fetchCandidates(page); // Refresh current page
       } catch (error) {
         console.error('Failed to update candidate stage:', error);
-        setCandidates(candidates);
         setError('Failed to update candidate stage. Please try again.');
       } finally {
         setIsUpdating(false);
@@ -141,10 +161,7 @@ const CandidatesKanban: React.FC = () => {
     await candidateService.deleteCandidate(candidate.id);
     await fetchCandidates();
   };
-  const candidatesByStage = CANDIDATE_STAGES.reduce((acc, stage) => {
-    acc[stage] = candidates.filter(candidate => candidate.stage === stage);
-    return acc;
-  }, {} as Record<string, Candidate[]>);
+
 
   if (loading) {
     return (
@@ -207,6 +224,7 @@ const CandidatesKanban: React.FC = () => {
               key={stage}
               stage={stage}
               candidates={candidatesByStage[stage] || []}
+              totalCount={stageStats[stage]?.total || 0}
               onViewCandidate={handleViewCandidate}
               onDeleteCandidate={handleDeleteCandidate}
             />
@@ -233,7 +251,31 @@ const CandidatesKanban: React.FC = () => {
         </DragOverlay>
       </DndContext>
 
-      {candidates.length === 0 && (
+      {totalPages > 1 && !loading && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => fetchCandidates(page - 1)}
+            disabled={page === 1 || isUpdating}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-gray-600">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => fetchCandidates(page + 1)}
+            disabled={page >= totalPages || isUpdating}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+      {allCandidates.length === 0 && (
         <div className="bg-white rounded-lg shadow p-12">
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">

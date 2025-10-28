@@ -1,5 +1,6 @@
 import { db } from '../db/schema';
 import { seedDatabase } from '../data/seedData';
+import { runMigrations } from '../db/migrations';
 
 const SEED_KEY = 'talentflow_seeded';
 const SEED_VERSION = '1.0.0';
@@ -8,6 +9,10 @@ export async function initializeDatabase(): Promise<void> {
   try {
     await db.open();
     console.log('Database opened successfully');
+
+    // Run any pending migrations
+    await runMigrations();
+    console.log('Migrations completed');
 
     const seeded = localStorage.getItem(SEED_KEY);
     const seedVersion = localStorage.getItem(`${SEED_KEY}_version`);

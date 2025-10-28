@@ -14,9 +14,9 @@ export class TalentFlowDB extends Dexie {
   constructor() {
     super('TalentFlowDB');
     
-    this.version(1).stores({
+    this.version(2).stores({
       jobs: 'id, title, slug, status, order, createdAt, updatedAt',
-      candidates: 'id, name, email, stage, jobId, appliedAt, updatedAt',
+      candidates: 'id, name, email, stage, jobId, order, appliedAt, updatedAt',
       assessments: 'id, jobId, title, createdAt, updatedAt',
       assessmentResponses: 'id, candidateId, assessmentId, completedAt',
       candidateTimeline: 'id, candidateId, type, timestamp',

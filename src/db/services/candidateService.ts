@@ -62,6 +62,8 @@ export class CandidateService {
     };
   }
 
+
+
   // single candidate by ID
   async getCandidateById(id: string): Promise<Candidate | undefined> {
     return await db.candidates.get(id);
@@ -190,10 +192,45 @@ export class CandidateService {
     return note;
   }
 
-  // get candidates by stage
-  async getCandidatesByStage(stage: Candidate['stage']): Promise<Candidate[]> {
-    return await db.candidates.where('stage').equals(stage).toArray();
+  // get candidates by stage with pagination
+  async getCandidatesByStages(params: {
+    page?: number;
+    pageSize?: number;
+    stages: Candidate['stage'][];
+  }): Promise<Record<Candidate['stage'], PaginatedResponse<Candidate>>> {
+    const {
+      page = 1,
+      pageSize = 50,
+      stages
+    } = params;
+
+    const results: Record<Candidate['stage'], PaginatedResponse<Candidate>> = {} as Record<Candidate['stage'], PaginatedResponse<Candidate>>;
+
+    await Promise.all(stages.map(async (stage) => {
+      const collection = db.candidates.where('stage').equals(stage);
+      const total = await collection.count();
+      const offset = (page - 1) * pageSize;
+      
+      const data = await collection
+        .offset(offset)
+        .limit(pageSize)
+        .toArray();
+
+      results[stage] = {
+        data: data.sort((a: Candidate, b: Candidate) => (a.order || 0) - (b.order || 0)),
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize)
+        }
+      };
+    }));
+
+    return results;
   }
+
+
 
   // get candidate statistics
   async getCandidateStats(): Promise<{

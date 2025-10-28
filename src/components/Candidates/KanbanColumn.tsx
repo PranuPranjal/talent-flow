@@ -7,11 +7,12 @@ import { useMemo } from 'react';
 interface KanbanColumnProps {
   stage: string;
   candidates: Candidate[];
+  totalCount: number;
   onViewCandidate: (candidate: Candidate) => void;
   onDeleteCandidate?: (candidate: Candidate) => void;
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, candidates, onViewCandidate, onDeleteCandidate }) => {
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, candidates, totalCount, onViewCandidate, onDeleteCandidate }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: stage,
     data: {
@@ -72,7 +73,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, candidates, onViewCa
               {getStageTitle(stage)}
             </h3>
             <span className="bg-white text-gray-600 text-sm px-2 py-1 rounded-full">
-              {sortedCandidates.length}
+              {totalCount}
             </span>
           </div>
         </div>
