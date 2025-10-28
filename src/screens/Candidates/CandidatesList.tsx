@@ -147,7 +147,6 @@ const CandidatesList: React.FC = () => {
               >
                 Kanban View
               </Button>
-              <Button variant="primary">Add Candidate</Button>
             </div>
           </div>
         </div>

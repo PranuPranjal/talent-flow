@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { jobService } from '../../db/services';
+import { jobService, assessmentService } from '../../db/services';
 import type { Job } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
@@ -28,6 +28,7 @@ const JobsList: React.FC = () => {
     total: 0,
     totalPages: 0
   });
+  const [jobHasAssessment, setJobHasAssessment] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
 
   const sensors = useSensors(
@@ -50,6 +51,18 @@ const JobsList: React.FC = () => {
       
       setJobs(response.data);
       setPagination(response.pagination);
+
+      // determine which jobs already have an assessment
+      try {
+        const map: Record<string, boolean> = {};
+        await Promise.all(response.data.map(async (job) => {
+          const a = await assessmentService.getAssessmentByJobId(job.id);
+          map[job.id] = !!a;
+        }));
+        setJobHasAssessment(map);
+      } catch (err) {
+        console.error('Failed to fetch assessments for jobs:', err);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load jobs');
       console.error('Error fetching jobs:', err);
@@ -125,6 +138,21 @@ const JobsList: React.FC = () => {
   const handleEditJob = (job: Job) => {
     setEditingJob(job);
     setShowModal(true);
+  };
+
+  const handleAddAssessment = async (job: Job) => {
+    // create a default assessment for the job and open the builder
+    const title = `${job.title} Assessment`;
+    try {
+      await assessmentService.createAssessment({ jobId: job.id, title, description: '', sections: [] });
+      // mark as present, refresh jobs and navigate to builder
+      setJobHasAssessment(prev => ({ ...prev, [job.id]: true }));
+      await fetchJobs(pagination.page);
+      navigate(`/assessments/${job.id}/builder`);
+    } catch (err) {
+      console.error('Failed to create assessment:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create assessment');
+    }
   };
 
   const handleDeleteJob = async (job: Job) => {
@@ -206,6 +234,8 @@ const JobsList: React.FC = () => {
               <DraggableJobCard
                 key={job.id}
                 job={job}
+                hasAssessment={!!jobHasAssessment[job.id]}
+                onAddAssessment={handleAddAssessment}
                 onView={handleViewJob}
                 onEdit={handleEditJob}
                 onDelete={handleDeleteJob}

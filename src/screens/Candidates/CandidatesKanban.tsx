@@ -198,7 +198,6 @@ const CandidatesKanban: React.FC = () => {
           >
             List View
           </Button>
-          <Button variant="primary">Add Candidate</Button>
         </div>
       </div>
 
@@ -285,7 +284,6 @@ const CandidatesKanban: React.FC = () => {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No candidates yet</h3>
             <p className="text-gray-500 mb-4">Get started by adding your first candidate</p>
-            <Button variant="primary">Add Candidate</Button>
           </div>
         </div>
       )}
