@@ -177,13 +177,14 @@ export class AssessmentService {
     let assessment = assessmentData || undefined;
     
     if (!assessment) {
-      // Create new assessment if it doesn't exist
+      // Get job details to create assessment with proper title
+      const job = await db.jobs.get(jobId);
       const id = this.generateId();
       assessment = {
         id,
         jobId,
-        title: 'Assessment',
-        description: '',
+        title: job ? `${job.title} Assessment` : 'Assessment',
+        description: job ? `Technical assessment for ${job.title}` : '',
         sections: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
