@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { candidateService } from '../../db/services';
+import { candidateService, assessmentService } from '../../db/services';
 import { HiUser, HiLockClosed, HiShieldCheck } from 'react-icons/hi';
 import Button from '../../components/UI/Button';
 
@@ -26,18 +26,18 @@ const Login: React.FC = () => {
     setUsername('');
     const load = async () => {
       try {
-        const resp = await candidateService.getCandidates({ page: 1, pageSize: 50 });
-        const allowedNames = [
-          'William Williams',
-          'Jennifer Clark',
-          'Lisa Gonzalez',
-          'Stephanie Clark',
-          'Michelle Garcia',
-          'Kenneth Wilson'
-        ];
-        const suggestions = resp.data
-          .filter((c: any) => allowedNames.includes(c.name))
-          .map((c: any) => ({ id: c.id, name: c.name }));
+          const assessmentsResp = await assessmentService.getAssessments({});
+          const jobsWithAssessments = [...new Set(assessmentsResp.data.map((a) => a.jobId))];
+
+          const resp = await candidateService.getCandidates({ 
+            page: 1, 
+            pageSize: 1000  
+          });
+        
+          const suggestions = resp.data
+            .filter((c: any) => jobsWithAssessments.includes(c.jobId))
+            .slice(0, 6) 
+            .map((c: any) => ({ id: c.id, name: c.name }));
         setCandidateSuggestions(suggestions);
       } catch (e) {
         console.error('Failed to load candidate suggestions', e);
