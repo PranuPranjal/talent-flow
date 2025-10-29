@@ -24,6 +24,7 @@ const AssessmentBuilder: React.FC = () => {
     required: false,
     options: []
   });
+  const [newOptionText, setNewOptionText] = useState('');
 
   useEffect(() => {
     if (jobId) {
@@ -410,18 +411,75 @@ const AssessmentBuilder: React.FC = () => {
           {(newQuestion.type === 'single_choice' || newQuestion.type === 'multi_choice') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Options (one per line)
+                Options
               </label>
-              <textarea
-                value={newQuestion.options?.join('\n') || ''}
-                onChange={(e) => setNewQuestion({
-                  ...newQuestion,
-                  options: e.target.value.split('\n').filter(o => o.trim())
-                })}
-                placeholder="Option 1&#10;Option 2&#10;Option 3"
-                rows={4}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-              />
+              <div className="space-y-2">
+                {/* Existing options list */}
+                {newQuestion.options?.map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => {
+                        const updatedOptions = [...(newQuestion.options || [])];
+                        updatedOptions[index] = e.target.value;
+                        setNewQuestion({ ...newQuestion, options: updatedOptions });
+                      }}
+                      className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updatedOptions = [...(newQuestion.options || [])];
+                        updatedOptions.splice(index, 1);
+                        setNewQuestion({ ...newQuestion, options: updatedOptions });
+                      }}
+                      className="p-2 text-red-600 hover:text-red-800"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+
+                {/* Add new option input */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newOptionText}
+                    onChange={(e) => setNewOptionText(e.target.value)}
+                    placeholder="Type a new option"
+                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newOptionText.trim()) {
+                        e.preventDefault();
+                        setNewQuestion({
+                          ...newQuestion,
+                          options: [...(newQuestion.options || []), newOptionText.trim()]
+                        });
+                        setNewOptionText('');
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!newOptionText.trim()}
+                    onClick={() => {
+                      if (newOptionText.trim()) {
+                        setNewQuestion({
+                          ...newQuestion,
+                          options: [...(newQuestion.options || []), newOptionText.trim()]
+                        });
+                        setNewOptionText('');
+                      }
+                    }}
+                  >
+                    Add Option
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
