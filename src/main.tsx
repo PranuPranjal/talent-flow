@@ -9,6 +9,12 @@ async function init() {
     await initializeMSW();
   }
 
+  // If the app is opened at the root path, make the first visible page the login page
+  // (replace the URL without reloading so routing will render the login route)
+  if (typeof window !== 'undefined' && window.location.pathname === '/') {
+    window.history.replaceState(null, '', '/login');
+  }
+
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />
