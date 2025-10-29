@@ -52,7 +52,7 @@ const Modal: React.FC<ModalProps> = ({
         />
 
   {/* Modal panel */}
-  <div className={`inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle w-full ${sizeClasses[size]} max-h-[calc(100vh-140px)] overflow-y-auto`}>
+      <div className={`inline-block align-bottom bg-white rounded-lg text-left overflow-y-auto shadow-xl transform transition-all sm:my-8 sm:align-middle w-full ${sizeClasses[size]} max-h-[calc(80vh-4rem)]` }>
           {/* Header */}
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between">

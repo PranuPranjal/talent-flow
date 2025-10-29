@@ -191,7 +191,7 @@ const Login: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.97 }}
               >
-                {r === 'admin' ? 'Admin / Recruiter' : 'Candidate'}
+                {r === 'admin' ? 'Admin' : 'Candidate'}
               </motion.button>
             ))}
           </div>
