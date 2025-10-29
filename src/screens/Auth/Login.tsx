@@ -26,8 +26,18 @@ const Login: React.FC = () => {
     setUsername('');
     const load = async () => {
       try {
-        const resp = await candidateService.getCandidates({ page: 1, pageSize: 6 });
-        const suggestions = resp.data.map((c: any) => ({ id: c.id, name: c.name }));
+        const resp = await candidateService.getCandidates({ page: 1, pageSize: 50 });
+        const allowedNames = [
+          'William Williams',
+          'Jennifer Clark',
+          'Lisa Gonzalez',
+          'Stephanie Clark',
+          'Michelle Garcia',
+          'Kenneth Wilson'
+        ];
+        const suggestions = resp.data
+          .filter((c: any) => allowedNames.includes(c.name))
+          .map((c: any) => ({ id: c.id, name: c.name }));
         setCandidateSuggestions(suggestions);
       } catch (e) {
         console.error('Failed to load candidate suggestions', e);
