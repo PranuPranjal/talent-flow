@@ -23,7 +23,7 @@ const Login: React.FC = () => {
       return;
     }
     setPassword('candidate');
-    setUsername('');
+    setUsername('9p9w7r9il');
     const load = async () => {
       try {
           const assessmentsResp = await assessmentService.getAssessments({});

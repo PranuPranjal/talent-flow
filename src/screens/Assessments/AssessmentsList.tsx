@@ -114,7 +114,7 @@ const AssessmentsList: React.FC = () => {
                     variant="secondary"
                     size="sm"
                     onClick={() => navigate(`/assessments/${assessment.jobId}/responses`)}
-                    className="flex-1 inline-flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="flex-1 inline-flex items-center gap-2 bg-emerald-700 text-white hover:bg-emerald-600"
                   >
                     <MdListAlt className="w-4 h-4" />
                     Responses
