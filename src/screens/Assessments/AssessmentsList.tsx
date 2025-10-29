@@ -4,6 +4,7 @@ import { assessmentService } from '../../db/services';
 import type { Assessment } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
+import { MdEdit, MdListAlt, MdWork } from 'react-icons/md';
 
 const AssessmentsList: React.FC = () => {
   const navigate = useNavigate();
@@ -76,11 +77,11 @@ const AssessmentsList: React.FC = () => {
           {assessments.map((assessment) => (
             <div
               key={assessment.id}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
+              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow flex flex-col justify-between h-full"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
                     {assessment.title}
                   </h3>
                   <p className="text-sm text-gray-600">
@@ -99,29 +100,23 @@ const AssessmentsList: React.FC = () => {
               )}
 
               <div className="space-y-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => navigate(`/assessments/${assessment.jobId}/take`)}
-                  className="w-full"
-                >
-                  Take Assessment
-                </Button>
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => navigate(`/assessments/${assessment.jobId}/builder`)}
-                    className="flex-1"
+                    className="flex-1 inline-flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700"
                   >
+                    <MdEdit className="w-4 h-4" />
                     Edit
                   </Button>
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => navigate(`/assessments/${assessment.jobId}/responses`)}
-                    className="flex-1"
+                    className="flex-1 inline-flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
                   >
+                    <MdListAlt className="w-4 h-4" />
                     Responses
                   </Button>
                 </div>
@@ -129,8 +124,9 @@ const AssessmentsList: React.FC = () => {
                   variant="secondary"
                   size="sm"
                   onClick={() => navigate(`/jobs/${assessment.jobId}`)}
-                  className="w-full"
+                  className="w-full inline-flex items-center gap-2 bg-slate-600 text-white hover:bg-slate-700"
                 >
+                  <MdWork className="w-4 h-4" />
                   View Job
                 </Button>
               </div>
@@ -147,12 +143,14 @@ const AssessmentsList: React.FC = () => {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No assessments yet</h3>
             <p className="text-gray-500 mb-4">
-              Assessments are created automatically when you open the builder for a job.
+              Assessments are saved when you add at least one section or question in the builder.
             </p>
             <Button 
               variant="primary"
               onClick={() => navigate('/jobs')}
+              className="inline-flex items-center gap-2"
             >
+              <MdWork className="w-5 h-5 text-white" />
               View Jobs
             </Button>
           </div>

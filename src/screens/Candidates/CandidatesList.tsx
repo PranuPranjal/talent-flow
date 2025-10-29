@@ -4,6 +4,7 @@ import { candidateService } from '../../db/services';
 import type { Candidate } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
+import { MdDownload, MdViewModule, MdVisibility } from 'react-icons/md';
 import { CANDIDATE_STAGES } from '../../utils/constants';
 import { jobService } from '../../db/services';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -166,7 +167,7 @@ const CandidatesList: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Job</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Applied to Job</label>
             <select
               value={jobFilter ?? ''}
               onChange={(e) => setJobFilter(e.target.value || undefined)}
@@ -194,6 +195,7 @@ const CandidatesList: React.FC = () => {
               </select>
               <Button
                 variant="primary"
+                className="inline-flex items-center gap-2 shadow-md px-5 py-2 text-base font-semibold"
                 onClick={async () => {
                   try {
                     // fetch all matching candidates (large pageSize)
@@ -238,27 +240,25 @@ const CandidatesList: React.FC = () => {
                     link.click();
                     link.remove();
                     setTimeout(() => URL.revokeObjectURL(url), 10000);
-                  } catch (err) {
-                    console.error('Export failed', err);
-                    alert('Failed to export candidates');
-                  }
-                }}
-              >
-                Export
-              </Button>
+                    } catch (err) {
+                      console.error('Export failed', err);
+                      alert('Failed to export candidates');
+                    }
+                  }}
+                >
+                  <MdDownload className="w-5 h-5 text-white" />
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  className="inline-flex items-center gap-2 shadow px-4 py-2 text-base font-semibold"
+                  onClick={() => navigate('/candidates/kanban')}
+                >
+                  <MdViewModule className="w-5 h-5 text-gray-700" />
+                  Kanban
+                </Button>
             </div>
           </div>
 
-          <div className="md:self-start">
-            <div className="flex gap-2">
-              <Button 
-                variant="secondary" 
-                onClick={() => navigate('/candidates/kanban')}
-              >
-                Kanban View
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -291,9 +291,11 @@ const CandidatesList: React.FC = () => {
                   </td>
                   <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                     <Button
-                      variant="ghost"
+                      variant="secondary"
                       onClick={() => handleViewCandidate(candidate.id)}
+                      className="inline-flex items-center gap-2"
                     >
+                      <MdVisibility className="w-4 h-4" />
                       View
                     </Button>
                   </td>
