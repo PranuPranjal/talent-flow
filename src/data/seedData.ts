@@ -316,12 +316,74 @@ export async function seedDatabase(): Promise<{
   for (let i = 0; i < candidates.length; i += batchSize) {
     await db.candidates.bulkAdd(candidates.slice(i, i + batchSize));
   }
-
   await db.assessments.bulkAdd(assessments);
+
+  // seed candidate timelines for the generated candidates
+  await seedCandidateTimelinesInternal(db, candidates);
 
   return {
     jobs: jobs.length,
     candidates: candidates.length,
     assessments: assessments.length
   };
+}
+
+// Internal helper used by seedDatabase and external calls to seed timelines
+async function seedCandidateTimelinesInternal(db: any, candidates: Candidate[]): Promise<number> {
+  const stagesOrder: Candidate['stage'][] = ['applied', 'screen', 'tech', 'offer', 'hired', 'rejected'];
+  let seeded = 0;
+
+  for (const candidate of candidates) {
+    try {
+      const base = new Date(candidate.appliedAt).getTime();
+
+      // applied event
+      await db.candidateTimeline.add({
+        id: generateId(),
+        candidateId: candidate.id,
+        type: 'stage_change',
+        description: 'Applied for position',
+        timestamp: new Date(base).toISOString(),
+        userId: 'system'
+      });
+
+      const idx = stagesOrder.indexOf(candidate.stage);
+      if (idx > 0) {
+        for (let i = 1; i <= idx; i++) {
+          const from = stagesOrder[i - 1];
+          const to = stagesOrder[i];
+          const ts = new Date(base + i * 1000).toISOString();
+          await db.candidateTimeline.add({
+            id: generateId(),
+            candidateId: candidate.id,
+            type: 'stage_change',
+            description: `Moved from ${from} to ${to} (pre-seeded)`,
+            timestamp: ts,
+            userId: 'system'
+          });
+        }
+      }
+
+      seeded++;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to seed timeline for candidate', candidate.id, e);
+    }
+  }
+
+  return seeded;
+}
+
+// Public helper: seeds timelines for existing candidates in the DB (idempotent if timeline exists)
+export async function seedCandidateTimelines(): Promise<number> {
+  const { db } = await import('../db/schema');
+  const candidates: Candidate[] = await db.candidates.toArray();
+
+  if (!candidates || candidates.length === 0) return 0;
+
+  // If there are already timeline events, skip to avoid duplicates
+  const timelineCount = await db.candidateTimeline.count();
+  if (timelineCount > 0) return 0;
+
+  return await seedCandidateTimelinesInternal(db, candidates);
 }

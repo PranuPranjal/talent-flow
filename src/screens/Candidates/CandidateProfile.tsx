@@ -350,9 +350,7 @@ const CandidateProfile: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">Notes</h2>
-              {(() => {
-                const { user } = useAuth();
-                return user?.role === 'admin' ? (
+                {user?.role === 'admin' && (
                   <Button 
                     variant="primary" 
                     size="sm"
@@ -362,8 +360,7 @@ const CandidateProfile: React.FC = () => {
                     <MdNoteAdd className="w-4 h-4 text-white" />
                     Add Note
                   </Button>
-                ) : null;
-              })()}
+                )}
             </div>
 
             <div className="space-y-4">

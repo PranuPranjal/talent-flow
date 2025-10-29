@@ -1,5 +1,5 @@
 import { db } from '../db/schema';
-import { seedDatabase } from '../data/seedData';
+import { seedDatabase, seedCandidateTimelines } from '../data/seedData';
 import { runMigrations } from '../db/migrations';
 
 const SEED_KEY = 'talentflow_seeded';
@@ -31,6 +31,13 @@ export async function initializeDatabase(): Promise<void> {
         console.log('Database is empty, seeding...');
         const result = await seedDatabase();
         console.log('Database seeded:', result);
+      }
+      // If the DB was seeded before timeline events were implemented, ensure timelines exist
+      const timelineCount = await db.candidateTimeline.count();
+      if (timelineCount === 0) {
+        console.log('Seeding missing candidate timelines...');
+        const seeded = await seedCandidateTimelines();
+        console.log('Seeded candidate timelines for', seeded, 'candidates');
       }
     }
   } catch (error) {

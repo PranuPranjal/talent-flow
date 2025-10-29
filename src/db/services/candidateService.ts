@@ -81,14 +81,44 @@ export class CandidateService {
 
     await db.candidates.add(candidate);
     
-    // add timeline event
-    await this.addTimelineEvent(candidate.id, {
+    // seed timeline events according to the candidate's current stage
+    await this.seedTimelineForStage(candidate.id, candidate.stage);
+
+    return candidate;
+  }
+
+  // seed timeline events for a candidate based on their current stage
+  private async seedTimelineForStage(candidateId: string, stage: Candidate['stage']): Promise<void> {
+    const stagesOrder: Candidate['stage'][] = ['applied', 'screen', 'tech', 'offer', 'hired', 'rejected'];
+
+    const idx = stagesOrder.indexOf(stage);
+    // If stage somehow not found, just add an applied event
+    if (idx === -1) {
+      await this.addTimelineEvent(candidateId, {
+        type: 'stage_change',
+        description: `Applied for position`,
+        userId: 'system'
+      });
+      return;
+    }
+
+    // always add the applied event first
+    await this.addTimelineEvent(candidateId, {
       type: 'stage_change',
       description: `Applied for position`,
       userId: 'system'
     });
 
-    return candidate;
+    // add successive stage change events up to current stage
+    for (let i = 1; i <= idx; i++) {
+      const from = stagesOrder[i - 1];
+      const to = stagesOrder[i];
+      await this.addTimelineEvent(candidateId, {
+        type: 'stage_change',
+        description: `Moved from ${from} to ${to} (pre-seeded)`,
+        userId: 'system'
+      });
+    }
   }
 
   // update candidate
