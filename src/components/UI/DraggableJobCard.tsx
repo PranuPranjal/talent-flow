@@ -2,8 +2,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Job } from '../../types';
 import Button from './Button';
-import { useNavigate } from 'react-router-dom';
-import { FiEye, FiEdit2, FiTrash2, FiClipboard, FiPlus } from 'react-icons/fi';
+// import { useNavigate } from 'react-router-dom';
+import { FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
 interface DraggableJobCardProps {
   job: Job;
@@ -15,7 +15,7 @@ interface DraggableJobCardProps {
   onDelete: (job: Job) => void;
 }
 
-const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment, candidateCount, onAddAssessment, onView, onEdit, onDelete }) => {
+const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, candidateCount, onView, onEdit, onDelete }) => {
   const {
     attributes,
     listeners,
@@ -25,7 +25,7 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment,
     isDragging,
   } = useSortable({ id: job.id });
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -90,7 +90,7 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment,
           ${job.salary?.min.toLocaleString()} - ${job.salary?.max.toLocaleString()}
         </span>
         <div className="flex gap-1">
-          {hasAssessment ? (
+          {/* {hasAssessment ? (
             <Button
               aria-label="Take assessment"
               title="Assessment"
@@ -118,7 +118,7 @@ const DraggableJobCard: React.FC<DraggableJobCardProps> = ({ job, hasAssessment,
             >
               <FiPlus />
             </Button>
-          )}
+          )} */}
           <Button
             aria-label="View job"
             title="View"
