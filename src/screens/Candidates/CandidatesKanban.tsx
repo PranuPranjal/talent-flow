@@ -21,7 +21,7 @@ const CandidatesKanban: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 5;
   const [stageStats, setStageStats] = useState<Record<string, { total: number; hasMore: boolean }>>({});
   const [jobFilter, setJobFilter] = useState<string | undefined>(undefined);
   const [jobs, setJobs] = useState<any[]>([]);

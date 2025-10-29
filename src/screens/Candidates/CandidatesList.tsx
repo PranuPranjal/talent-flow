@@ -20,7 +20,7 @@ const CandidatesList: React.FC = () => {
   const [exportStage, setExportStage] = useState<string | undefined>(undefined);
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 20,
+    pageSize: 10,
     total: 0,
     totalPages: 0
   });
