@@ -92,10 +92,14 @@ const JobsList: React.FC = () => {
   }, [debouncedSearch, status]);
 
   useEffect(() => {
-    if (searchInputRef.current && search) {
-      searchInputRef.current.focus();
-    }
-  }, [jobs]); 
+    const timeoutId = setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+  });
 
   const handlePageChange = (newPage: number) => {
     fetchJobs(newPage);
@@ -157,18 +161,9 @@ const JobsList: React.FC = () => {
   };
 
   const handleAddAssessment = async (job: Job) => {
-    // create a default assessment for the job and open the builder
-    const title = `${job.title} Assessment`;
-    try {
-      await assessmentService.createAssessment({ jobId: job.id, title, description: '', sections: [] });
-      // mark as present, refresh jobs and navigate to builder
-      setJobHasAssessment(prev => ({ ...prev, [job.id]: true }));
-      await fetchJobs(pagination.page);
-      navigate(`/assessments/${job.id}/builder`);
-    } catch (err) {
-      console.error('Failed to create assessment:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create assessment');
-    }
+    // Open the assessment builder for this job. An assessment will be created
+    // only when the user adds at least one section/question in the builder.
+    navigate(`/assessments/${job.id}/builder`);
   };
 
   const handleDeleteJob = async (job: Job) => {
@@ -205,7 +200,7 @@ const JobsList: React.FC = () => {
           <p className="text-gray-600">Showing {jobs.length} of {pagination.total} jobs</p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-3 md:items-end">
+              <div className="flex flex-col md:flex-row gap-3 md:items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
             <input
@@ -233,7 +228,12 @@ const JobsList: React.FC = () => {
           </div>
 
                   <div className="md:self-start">
-                    <Button variant="primary" onClick={handleOpenModal}>Create Job</Button>
+                    <Button variant="primary" onClick={handleOpenModal} className="inline-flex items-center gap-2 shadow-md px-5 py-2 text-base font-semibold">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Create Job
+                    </Button>
                   </div>
         </div>
       </div>

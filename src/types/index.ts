@@ -85,6 +85,7 @@ export interface AssessmentQuestion {
 export interface AssessmentResponse {
   id: string;
   candidateId: string;
+  candidateName?: string;
   assessmentId: string;
   responses: Record<string, any>;
   completedAt: string;

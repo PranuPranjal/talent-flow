@@ -91,7 +91,7 @@ const AssessmentResponses: React.FC = () => {
                     Response #{response.id.slice(-6)}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Candidate: {response.candidateId}
+                    Candidate: {response.candidateName ? `${response.candidateName} (${response.candidateId})` : response.candidateId}
                   </p>
                 </div>
                 <div className="text-right">

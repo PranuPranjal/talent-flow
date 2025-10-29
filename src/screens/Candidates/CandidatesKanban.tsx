@@ -21,7 +21,7 @@ const CandidatesKanban: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 5;
   const [stageStats, setStageStats] = useState<Record<string, { total: number; hasMore: boolean }>>({});
   const [jobFilter, setJobFilter] = useState<string | undefined>(undefined);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -217,12 +217,6 @@ const CandidatesKanban: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="secondary" 
-            onClick={() => navigate('/candidates')}
-          >
-            List View
-          </Button>
           <div className="flex items-center">
             <label className="text-sm text-gray-700 mr-2">Job</label>
             <select
@@ -236,6 +230,15 @@ const CandidatesKanban: React.FC = () => {
               ))}
             </select>
           </div>
+          <Button 
+            variant="secondary" 
+            onClick={() => navigate(`/candidates${jobFilter ? `?jobId=${jobFilter}` : ''}`)}
+          >
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            List
+          </Button>
         </div>
       </div>
 

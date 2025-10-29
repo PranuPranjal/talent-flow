@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { candidateService, jobService } from '../../db/services';
+import { candidateService, jobService, assessmentService } from '../../db/services';
 import type { Candidate, CandidateTimelineEvent, Note } from '../../types';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Button from '../../components/UI/Button';
+import { MdArrowBack, MdAssignment, MdNoteAdd, MdDescription } from 'react-icons/md';
+import { useAuth } from '../../contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
 import Modal from '../../components/UI/Modal';
 
 const CandidateProfile: React.FC = () => {
@@ -15,6 +18,8 @@ const CandidateProfile: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasAssessmentForJob, setHasAssessmentForJob] = useState<boolean>(false);
+  const [hasTakenAssessment, setHasTakenAssessment] = useState<boolean>(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [newNote, setNewNote] = useState('');
   const noteInputRef = useRef<HTMLTextAreaElement>(null);
@@ -35,6 +40,8 @@ const CandidateProfile: React.FC = () => {
     const q = currentMentionQuery.toLowerCase();
     return mentionUsers.filter(u => u.name.toLowerCase().includes(q)).slice(0, 5);
   }, [currentMentionQuery, mentionUsers]);
+
+  const { user } = useAuth();
 
   useEffect(() => {
     if (id) {
@@ -68,6 +75,25 @@ const CandidateProfile: React.FC = () => {
       if (candidateData.jobId) {
         const jobData = await jobService.getJobById(candidateData.jobId);
         setJob(jobData);
+      }
+      // check assessment availability + whether candidate already took it
+      try {
+        if (candidateData.jobId) {
+          const a = await assessmentService.getAssessmentByJobId(candidateData.jobId);
+          setHasAssessmentForJob(!!a);
+          if (a) {
+            const responses = await assessmentService.getCandidateResponses(candidateData.id);
+            const taken = responses.some(r => r.assessmentId === a.id);
+            setHasTakenAssessment(!!taken);
+          } else {
+            setHasTakenAssessment(false);
+          }
+        } else {
+          setHasAssessmentForJob(false);
+          setHasTakenAssessment(false);
+        }
+      } catch (e) {
+        console.error('Failed to check assessment status', e);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load candidate data');
@@ -158,11 +184,19 @@ const CandidateProfile: React.FC = () => {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <p className="text-red-600">{error || 'Candidate not found'}</p>
-        <Button onClick={() => navigate('/candidates')} className="mt-4">
-          Back to Candidates
+        <Button onClick={() => navigate(user?.role === 'admin' ? '/candidates' : '/jobs')} className="mt-4">
+          Back
         </Button>
       </div>
     );
+  }
+
+  // If logged in as candidate, ensure they can only view their own profile
+  if (user && user.role === 'candidate') {
+    if (!id || id !== user.id) {
+      return <Navigate to={`/candidates/${user.id}`} replace />;
+    }
+    // allow full profile render below (no early return) so candidates can see timeline
   }
 
   return (
@@ -170,16 +204,16 @@ const CandidateProfile: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/candidates')}
-            className="flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Candidates
-          </Button>
+          {user?.role === 'admin' && (
+            <Button 
+              variant="secondary" 
+              onClick={() => navigate('/candidates')}
+              className="flex items-center gap-2"
+            >
+              <MdArrowBack className="w-4 h-4" />
+              Back
+            </Button>
+          )}
         </div>
       </div>
 
@@ -230,6 +264,28 @@ const CandidateProfile: React.FC = () => {
                     <p><strong>Experience:</strong> {candidate.experience} years</p>
                   )}
                 </div>
+                  {user?.role === 'candidate' && (
+                    <div className="mt-3">
+                      {candidate.jobId ? (
+                        hasAssessmentForJob ? (
+                          hasTakenAssessment ? (
+                            <div className="text-sm text-gray-600">You have already completed the assessment for this job.</div>
+                          ) : (
+                            <Button
+                              variant="primary"
+                              onClick={() => navigate(`/assessments/${candidate.jobId}/take`)}
+                              className="inline-flex items-center gap-2"
+                            >
+                              <MdAssignment className="w-4 h-4 text-white" />
+                              Take Assessment
+                            </Button>
+                          )
+                        ) : (
+                          <div className="text-sm text-gray-600">No assessment available for your applied job yet.</div>
+                        )
+                      ) : null}
+                    </div>
+                  )}
               </div>
 
               {candidate.skills && candidate.skills.length > 0 && (
@@ -248,14 +304,14 @@ const CandidateProfile: React.FC = () => {
               {candidate.resume && (
                 <div>
                   <h3 className="font-medium text-gray-900 mb-2">Resume</h3>
-                  <a 
-                    href={candidate.resume} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 text-sm"
+                  <Button
+                    variant="ghost"
+                    onClick={() => window.open(candidate.resume, '_blank')}
+                    className="inline-flex items-center gap-2 text-sm"
                   >
+                    <MdDescription className="w-4 h-4 text-gray-600" />
                     View Resume
-                  </a>
+                  </Button>
                 </div>
               )}
             </div>
@@ -294,13 +350,20 @@ const CandidateProfile: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">Notes</h2>
-              <Button 
-                variant="primary" 
-                size="sm"
-                onClick={() => setShowAddNoteModal(true)}
-              >
-                Add Note
-              </Button>
+              {(() => {
+                const { user } = useAuth();
+                return user?.role === 'admin' ? (
+                  <Button 
+                    variant="primary" 
+                    size="sm"
+                    onClick={() => setShowAddNoteModal(true)}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <MdNoteAdd className="w-4 h-4 text-white" />
+                    Add Note
+                  </Button>
+                ) : null;
+              })()}
             </div>
 
             <div className="space-y-4">
