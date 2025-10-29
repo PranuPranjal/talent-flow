@@ -93,18 +93,24 @@ const CandidatesList: React.FC = () => {
     };
 
     loadJobs();
-    fetchCandidates();
-  }, [debouncedSearch, stage]);
+  }, [location.search]); // Only run when URL changes
 
+  // Reset pagination and fetch candidates when filters change
   useEffect(() => {
-    fetchCandidates();
-  }, [jobFilter]);
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
+    fetchCandidates(1); // Fetch first page
+  }, [debouncedSearch, stage, jobFilter]); // All filters as dependencies
 
+  // Keep focus on search input after any re-render
   useEffect(() => {
-    if (searchInputRef.current && search) {
-      searchInputRef.current.focus();
-    }
-  }, [candidates, search]); 
+    const timeoutId = setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+  });
 
   const handleViewCandidate = (candidateId: string) => {
     navigate(`/candidates/${candidateId}`);

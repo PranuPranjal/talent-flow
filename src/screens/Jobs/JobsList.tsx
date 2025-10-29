@@ -92,10 +92,14 @@ const JobsList: React.FC = () => {
   }, [debouncedSearch, status]);
 
   useEffect(() => {
-    if (searchInputRef.current && search) {
-      searchInputRef.current.focus();
-    }
-  }, [jobs]); 
+    const timeoutId = setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+  });
 
   const handlePageChange = (newPage: number) => {
     fetchJobs(newPage);
